@@ -1,0 +1,22 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+*.tmp
+*.swp
+
+# Application runtime
+uploads/
+storage/logs/
+storage/tmp/
+storage/knowledge/
+
+# Composer / Node
+node_modules/

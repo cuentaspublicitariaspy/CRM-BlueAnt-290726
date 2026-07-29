@@ -1,0 +1,36 @@
+# ----------------------------------------------------------------------
+# CONFIGURACIÓN DE SEGURIDAD AVANZADA PARA EL CRM
+# ----------------------------------------------------------------------
+
+
+# 1. Deshabilitar el listado de directorios (evita exploración de carpetas como api/, lib/, etc.)
+Options -Indexes
+
+# 2. Bloquear acceso a archivos de entorno, configuración, bases de datos, logs y control de versiones
+<FilesMatch "^\.env|^\.git|^\.gitignore|^\.vscode|^\.idea|schema\.sql|package.*\.json|next\.config\.mjs|composer.*|.*\.log|.*\.sql|.*\.sqlite|.*\.db$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# 3. Bloquear acceso web directo a carpetas de código fuente interno (Next.js, React, plantillas visuales)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Reglas de redirección para QR dinámicos de prospección
+    RewriteRule ^r/([^/]+)/([^/]+)/?$ r.php?slug=$1&campana=$2 [L,QSA]
+
+    # Landing pública por slug de usuario: landings_gen/{slug}?lp={landing_id}
+    # Solo letras, números, guiones — no interfiere con archivos .html reales
+    RewriteRule ^landings_gen/([a-zA-Z0-9_-]+)$ landings_gen.php?slug=$1 [L,QSA]
+    
+    RewriteRule ^(app|components|visual)(/|$) - [F,L]
+</IfModule>
+
+# 4. Redirigir errores de acceso (403 Forbidden, 429 Rate Limiting/WAF, 400, 401, 404, 500, 503) a la pantalla interactiva
+ErrorDocument 403 /crm/403.php
+ErrorDocument 429 /crm/403.php
+ErrorDocument 400 /crm/403.php
+ErrorDocument 401 /crm/403.php
+ErrorDocument 404 /crm/403.php
+ErrorDocument 500 /crm/403.php
+ErrorDocument 503 /crm/403.php
