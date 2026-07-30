@@ -145,6 +145,8 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                             <a href="marketing.php" class="nav-link   flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
 
                                 <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                            <a href="agenda.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
+                                <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                             <?php if ($is_admin): ?>
 
@@ -212,6 +214,8 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                     <a href="marketing.php" class="nav-link   flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
 
                         <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                    <a href="agenda.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
+                        <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                     <?php if ($is_admin): ?>
 
@@ -367,6 +371,12 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                     <div id="prospect-phone-picker"></div>
                 </div>
                 <input type="email" name="email" required placeholder="Email" class="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:border-indigo-500">
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Agente externo (opcional)</label>
+                    <select name="external_agent_id" id="external-agent-select" class="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:border-indigo-500">
+                        <option value="">Sin agente externo</option>
+                    </select>
+                </div>
                 <div class="flex gap-4">
                     <button type="submit" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold">Guardar</button>
                     <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold">Cerrar</button>
@@ -510,8 +520,23 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
             PhonePicker.render('prospect-phone-picker', 'whatsapp', { theme: 'crm', placeholder: 'Número local' });
         }
 
-        function openModal(isEdit = false) { 
+        async function loadExternalAgentsOptions() {
+            const select = document.getElementById('external-agent-select');
+            if (!select) return;
+            try {
+                const res = await fetch('api/agenda-external-agents.php?active_only=1');
+                const agents = await res.json();
+                const current = select.value;
+                select.innerHTML = '<option value="">Sin agente externo</option>' +
+                    (Array.isArray(agents) ? agents.map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${escapeHtml(a.phone)})</option>`).join('') : '');
+                select.value = current;
+            } catch (e) { /* silencioso: el módulo Agenda puede no estar en uso */ }
+        }
+        loadExternalAgentsOptions();
+
+        function openModal(isEdit = false) {
             document.getElementById('modalTitle').innerText = isEdit ? 'Editar Prospecto' : 'Nuevo Prospecto';
+            if (!isEdit) { const sel = document.getElementById('external-agent-select'); if (sel) sel.value = ''; }
             document.getElementById('prospectModal').classList.remove('hidden'); document.getElementById('prospectModal').classList.add('flex');
         }
         function closeModal() { document.getElementById('prospectModal').classList.add('hidden'); document.getElementById('prospectForm').reset(); }
@@ -910,7 +935,7 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
             }
         }
 
-        function editProspect(p) {
+        async function editProspect(p) {
             document.getElementById('edit-id').value = p.id;
             document.querySelector('[name="name"]').value = p.name;
             document.querySelector('[name="email"]').value = p.email;
@@ -921,6 +946,9 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                 const plain = document.getElementById('prospect-wa-plain');
                 if (plain) plain.value = p.whatsapp;
             }
+            await loadExternalAgentsOptions();
+            const sel = document.getElementById('external-agent-select');
+            if (sel) sel.value = p.external_agent_id || '';
             openModal(true);
         }
 

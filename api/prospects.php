@@ -36,18 +36,21 @@ if ($method === 'GET') {
         if ($is_admin) {
             $stmt = $pdo->query("
                 SELECT p.*, l.title AS landing_title, l.color AS landing_color, p.agent_domain AS domain,
-                       u.name AS user_name
+                       u.name AS user_name, ea.name AS external_agent_name
                 FROM prospects p
                 LEFT JOIN landings l ON p.landing_id = l.id
                 LEFT JOIN users u ON p.user_id = u.id
+                LEFT JOIN agenda_external_agents ea ON ea.id = p.external_agent_id
                 WHERE p.status = 'prospecto' OR p.status IS NULL
                 ORDER BY p.id DESC
             ");
         } else {
             $stmt = $pdo->prepare("
-                SELECT p.*, l.title AS landing_title, l.color AS landing_color, p.agent_domain AS domain 
+                SELECT p.*, l.title AS landing_title, l.color AS landing_color, p.agent_domain AS domain,
+                       ea.name AS external_agent_name
                 FROM prospects p
                 LEFT JOIN landings l ON p.landing_id = l.id
+                LEFT JOIN agenda_external_agents ea ON ea.id = p.external_agent_id
                 WHERE p.user_id = ? AND (p.status = 'prospecto' OR p.status IS NULL)
                 ORDER BY p.id DESC
             ");
@@ -150,12 +153,24 @@ if ($method === 'POST') {
     // ACTUALIZAR
     if (!empty($id) && !empty($data['name'])) {
         try {
+            // Resolver el dueño real del prospecto para validar el agente externo (admin puede editar cualquiera)
+            $ownerStmt = $pdo->prepare("SELECT user_id FROM prospects WHERE id = ?");
+            $ownerStmt->execute([$id]);
+            $prospectOwnerId = (int)($ownerStmt->fetchColumn() ?: $user_id);
+
+            $externalAgentId = null;
+            if (!empty($data['external_agent_id'])) {
+                $eaStmt = $pdo->prepare("SELECT id FROM agenda_external_agents WHERE id = ? AND user_id = ?");
+                $eaStmt->execute([(int)$data['external_agent_id'], $prospectOwnerId]);
+                if ($eaStmt->fetch()) $externalAgentId = (int)$data['external_agent_id'];
+            }
+
             if ($is_admin) {
-                $pdo->prepare("UPDATE prospects SET name = ?, email = ?, whatsapp = ? WHERE id = ?")
-                    ->execute([$data['name'], $data['email'] ?? '', $data['whatsapp'] ?? '', $id]);
+                $pdo->prepare("UPDATE prospects SET name = ?, email = ?, whatsapp = ?, external_agent_id = ? WHERE id = ?")
+                    ->execute([$data['name'], $data['email'] ?? '', $data['whatsapp'] ?? '', $externalAgentId, $id]);
             } else {
-                $pdo->prepare("UPDATE prospects SET name = ?, email = ?, whatsapp = ? WHERE id = ? AND user_id = ?")
-                    ->execute([$data['name'], $data['email'] ?? '', $data['whatsapp'] ?? '', $id, $user_id]);
+                $pdo->prepare("UPDATE prospects SET name = ?, email = ?, whatsapp = ?, external_agent_id = ? WHERE id = ? AND user_id = ?")
+                    ->execute([$data['name'], $data['email'] ?? '', $data['whatsapp'] ?? '', $externalAgentId, $id, $user_id]);
             }
             respond(['success' => true]);
         } catch (Exception $e) { respond(['error' => $e->getMessage()], 500); }

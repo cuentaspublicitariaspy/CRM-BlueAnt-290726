@@ -104,6 +104,8 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                             <a href="marketing.php" class="nav-link   flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
 
                                 <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                            <a href="agenda.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
+                                <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                             <?php if ($is_admin): ?>
 
@@ -171,6 +173,8 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                     <a href="marketing.php" class="nav-link   flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
 
                         <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                    <a href="agenda.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
+                        <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                     <?php if ($is_admin): ?>
 

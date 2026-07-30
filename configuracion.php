@@ -89,6 +89,8 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
                             <a href="marketing.php" class="nav-link   flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
 
                                 <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                            <a href="agenda.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
+                                <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                             <?php if ($is_admin): ?>
 
@@ -156,6 +158,8 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
                     <a href="marketing.php" class="nav-link   flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
 
                         <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                    <a href="agenda.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
+                        <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                     <?php if ($is_admin): ?>
 
@@ -285,6 +289,62 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
                 <button onclick="saveElevenLabsKey()" id="saveElBtn" class="w-full bg-violet-600 hover:bg-violet-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-violet-100 transition-all active:scale-95 flex items-center justify-center gap-3">
                     <i data-lucide="save" class="w-5 h-5"></i> Guardar API Key de ElevenLabs
                 </button>
+            </div>
+        </div>
+
+        <!-- Notificaciones de Agenda: SMTP y SMS -->
+        <div class="glass-card rounded-[2.5rem] p-8 md:p-12">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <i data-lucide="calendar-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">Notificaciones de Agenda</h2>
+                    <p class="text-slate-500 text-sm">Credenciales de envío para los recordatorios y avisos automáticos del módulo Agenda</p>
+                </div>
+            </div>
+
+            <div class="space-y-10">
+                <!-- SMTP -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email (SMTP)</label>
+                        <span id="agendaSmtpBadge" class="text-xs font-bold"></span>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-3xl border border-slate-100 grid md:grid-cols-2 gap-4">
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Host</label><input id="agenda-smtp-host" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Puerto</label><input id="agenda-smtp-port" type="number" value="587" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Usuario</label><input id="agenda-smtp-username" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Contraseña (vacío = no cambiarla)</label><input id="agenda-smtp-password" type="password" placeholder="••••••••" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Email remitente</label><input id="agenda-smtp-from-email" type="email" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Nombre remitente</label><input id="agenda-smtp-from-name" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div class="md:col-span-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Encriptación</label>
+                            <select id="agenda-smtp-encryption" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500">
+                                <option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">Ninguna</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <button onclick="saveAgendaSmtp()" id="saveAgendaSmtpBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95">Guardar SMTP</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SMS (Twilio) -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">SMS (Twilio)</label>
+                        <span id="agendaSmsBadge" class="text-xs font-bold"></span>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-3xl border border-slate-100 grid md:grid-cols-2 gap-4">
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Account SID</label><input id="agenda-sms-sid" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Número de origen</label><input id="agenda-sms-from" placeholder="+595981000000" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div class="md:col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Auth Token (vacío = no cambiarlo)</label><input id="agenda-sms-token" type="password" placeholder="••••••••" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"></div>
+                        <div class="md:col-span-2">
+                            <button onclick="saveAgendaSms()" id="saveAgendaSmsBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-100 transition-all active:scale-95">Guardar SMS</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -437,7 +497,78 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
             btn.innerHTML = '💾 Guardar API Key de ElevenLabs';
         }
 
+        // ── Agenda: SMTP y SMS (comparten patrón simple fetch/guardar) ──
+        async function fetchAgendaSmtp() {
+            try {
+                const res = await fetch('api/agenda-smtp-config.php');
+                const cfg = await res.json();
+                document.getElementById('agendaSmtpBadge').innerHTML = cfg.configured
+                    ? '<span class="text-emerald-600">✓ Configurado</span>' : '<span class="text-slate-400">Sin configurar</span>';
+                document.getElementById('agenda-smtp-host').value = cfg.host || '';
+                document.getElementById('agenda-smtp-port').value = cfg.port || 587;
+                document.getElementById('agenda-smtp-username').value = cfg.username || '';
+                document.getElementById('agenda-smtp-from-email').value = cfg.from_email || '';
+                document.getElementById('agenda-smtp-from-name').value = cfg.from_name || '';
+                document.getElementById('agenda-smtp-encryption').value = cfg.encryption || 'tls';
+            } catch (err) { console.error(err); }
+        }
+        async function saveAgendaSmtp() {
+            const btn = document.getElementById('saveAgendaSmtpBtn');
+            const data = {
+                host: document.getElementById('agenda-smtp-host').value,
+                port: document.getElementById('agenda-smtp-port').value,
+                username: document.getElementById('agenda-smtp-username').value,
+                password: document.getElementById('agenda-smtp-password').value,
+                from_email: document.getElementById('agenda-smtp-from-email').value,
+                from_name: document.getElementById('agenda-smtp-from-name').value,
+                encryption: document.getElementById('agenda-smtp-encryption').value,
+            };
+            btn.disabled = true; btn.textContent = 'Guardando...';
+            try {
+                const res = await fetch('api/agenda-smtp-config.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('✅ SMTP guardado');
+                    document.getElementById('agenda-smtp-password').value = '';
+                    fetchAgendaSmtp();
+                } else { showToast('❌ ' + (result.error || 'Error al guardar'), true); }
+            } catch (err) { showToast('❌ Error al guardar', true); }
+            btn.disabled = false; btn.textContent = 'Guardar SMTP';
+        }
+
+        async function fetchAgendaSms() {
+            try {
+                const res = await fetch('api/agenda-sms-config.php');
+                const cfg = await res.json();
+                document.getElementById('agendaSmsBadge').innerHTML = cfg.configured
+                    ? '<span class="text-emerald-600">✓ Configurado</span>' : '<span class="text-slate-400">Sin configurar</span>';
+                document.getElementById('agenda-sms-sid').value = cfg.account_sid || '';
+                document.getElementById('agenda-sms-from').value = cfg.from_number || '';
+            } catch (err) { console.error(err); }
+        }
+        async function saveAgendaSms() {
+            const btn = document.getElementById('saveAgendaSmsBtn');
+            const data = {
+                account_sid: document.getElementById('agenda-sms-sid').value,
+                from_number: document.getElementById('agenda-sms-from').value,
+                auth_token: document.getElementById('agenda-sms-token').value,
+            };
+            btn.disabled = true; btn.textContent = 'Guardando...';
+            try {
+                const res = await fetch('api/agenda-sms-config.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('✅ SMS guardado');
+                    document.getElementById('agenda-sms-token').value = '';
+                    fetchAgendaSms();
+                } else { showToast('❌ ' + (result.error || 'Error al guardar'), true); }
+            } catch (err) { showToast('❌ Error al guardar', true); }
+            btn.disabled = false; btn.textContent = 'Guardar SMS';
+        }
+
         fetchSettings();
+        fetchAgendaSmtp();
+        fetchAgendaSms();
         lucide.createIcons();
     </script>
 </body>

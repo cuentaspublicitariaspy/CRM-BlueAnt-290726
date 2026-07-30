@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 header('Content-Type: text/html; charset=utf-8');
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit(); }
@@ -98,6 +98,8 @@ if ($is_admin) {
                             <a href="marketing.php" class="nav-link active flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
 
                                 <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                            <a href="agenda.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all">
+                                <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                             <?php if ($is_admin): ?>
 
@@ -165,6 +167,8 @@ if ($is_admin) {
                     <a href="marketing.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
 
                         <i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+                    <a href="agenda.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all">
+                        <i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
 
                     <?php if ($is_admin): ?>
 

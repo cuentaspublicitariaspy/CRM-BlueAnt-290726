@@ -390,6 +390,11 @@ try {
       // ElevenLabs Knowledge Base document ID per file
       try { $pdo->exec("ALTER TABLE knowledge_files ADD COLUMN elevenlabs_doc_id VARCHAR(100) NULL DEFAULT NULL"); } catch (\Exception $e) {}
 
+      // ============================================================
+      // MÓDULO AGENDA / TURNOS / RESERVAS
+      // ============================================================
+      require __DIR__ . '/../agenda/schema.php';
+
  } catch (\PDOException $e) {
      // Si estamos en contexto API, devolver JSON en vez de HTML
      if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'text/html') === false) {
