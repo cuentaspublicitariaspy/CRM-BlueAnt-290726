@@ -15,9 +15,17 @@
 class AgendaAuth {
 
     /** Cuenta bajo la cual viven todos los datos del negocio (sucursal,
-     * recursos, servicios, reservas). Fija porque este CRM es de un único
-     * negocio (Blue Ant Wealth) — no hay selector de negocio en la UI. */
-    const BUSINESS_OWNER_USER_ID = 2;
+     * recursos, servicios, reservas). Este CRM es de un único negocio (Blue
+     * Ant Wealth) — no hay selector de negocio en la UI. El user_id real
+     * difiere entre entornos (dev local vs producción tienen tablas users
+     * distintas), por eso se resuelve desde AGENDA_BUSINESS_OWNER_USER_ID en
+     * .env en vez de quedar fijo en el código; 2 es el fallback de dev local. */
+    const BUSINESS_OWNER_USER_ID_FALLBACK = 2;
+
+    private static function businessOwnerUserId(): int {
+        $value = getenv('AGENDA_BUSINESS_OWNER_USER_ID');
+        return $value !== false && $value !== '' ? (int)$value : self::BUSINESS_OWNER_USER_ID_FALLBACK;
+    }
 
     /**
      * Exige sesión activa. Corta el request con 401 si no hay sesión.
@@ -42,7 +50,7 @@ class AgendaAuth {
      * si pueden mutar configuración o no (ver requireAdmin()).
      */
     public static function resolveOwnerUserId(array $session, $requestedUserId = null): int {
-        return self::BUSINESS_OWNER_USER_ID;
+        return self::businessOwnerUserId();
     }
 
     /**
