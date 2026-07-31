@@ -19,11 +19,9 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    // Crear/editar/borrar agentes externos es configuración: solo admin. La
-    // lectura sigue abierta para que el subscriber pueda ASIGNAR un agente
-    // ya cargado al agendar manualmente (eso no es crear configuración nueva).
-    AgendaAuth::requireAdmin($session);
-
+    // A diferencia del resto de la configuración, los agentes externos los
+    // maneja el día a día el subscriber (referentes que van apareciendo al
+    // agendar) — no está gateado a admin.
     $data = json_decode(file_get_contents('php://input'), true);
     if (!is_array($data)) $data = $_POST;
     $action = $data['action'] ?? null;

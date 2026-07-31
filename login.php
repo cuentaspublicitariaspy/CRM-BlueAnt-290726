@@ -44,6 +44,7 @@ header('Content-Type: text/html; charset=utf-8');
             <div class="text-right">
                 <a href="forgot-password.php" class="text-xs font-bold text-indigo-600 hover:text-indigo-700">?Olvidaste tu clave?</a>
             </div>
+            <p id="loginError" class="hidden text-center text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl py-2.5 px-4"></p>
             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-indigo-100 transition-all active:scale-[0.98] mt-4">Iniciar Sesión</button>
         </form>
 
@@ -55,6 +56,8 @@ header('Content-Type: text/html; charset=utf-8');
     <script>
         document.getElementById('loginForm').onsubmit = async (e) => {
             e.preventDefault();
+            const errorEl = document.getElementById('loginError');
+            errorEl.classList.add('hidden');
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
             data.action = 'login';
@@ -65,9 +68,13 @@ header('Content-Type: text/html; charset=utf-8');
                     body: JSON.stringify(data)
                 });
                 const result = await res.json();
-                if (result.success) window.location.href = 'index.php';
-                else alert(result.error);
-            } catch (err) { console.error(err); }
+                if (result.success) { window.location.href = 'index.php'; return; }
+                errorEl.textContent = result.error || 'No se pudo iniciar sesión.';
+                errorEl.classList.remove('hidden');
+            } catch (err) {
+                errorEl.textContent = 'Error de conexión. Probá de nuevo.';
+                errorEl.classList.remove('hidden');
+            }
         };
         lucide.createIcons();
     </script>

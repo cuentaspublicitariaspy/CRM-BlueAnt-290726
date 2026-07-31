@@ -73,11 +73,17 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
         <nav class="flex-1 space-y-2">
             <a href="index.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="layout-dashboard" class="w-5 h-5"></i>Dashboard</a>
             <a href="prospectos.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="users" class="w-5 h-5"></i>Prospectos</a>
+            <a href="acciones.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="list" class="w-5 h-5"></i>Acciones</a>
             <a href="clientes.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="user-check" class="w-5 h-5"></i>Clientes</a>
-            <a href="agenda.php" class="nav-link active flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
             <a href="servicios.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="briefcase" class="w-5 h-5"></i>Servicios</a>
             <a href="agentes.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="bot" class="w-5 h-5"></i>Agentes</a>
+            <a href="landings.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="rocket" class="w-5 h-5"></i>Landings</a>
             <a href="marketing.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+            <a href="agenda.php" class="nav-link active flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
+            <?php if ($is_admin): ?>
+            <a href="usuarios.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="users" class="w-5 h-5"></i>Usuarios</a>
+            <a href="configuracion.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="settings" class="w-5 h-5"></i>Configuración</a>
+            <?php endif; ?>
             <a href="perfil.php" class="nav-link flex items-center gap-4 px-4 py-3 rounded-xl transition-all"><i data-lucide="user" class="w-5 h-5"></i>Mi Perfil</a>
         </nav>
         <div class="pt-4 mt-auto">
@@ -97,11 +103,13 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
     <nav class="flex-1 px-4 space-y-1 overflow-y-auto">
         <a href="index.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="layout-dashboard" class="w-5 h-5"></i>Dashboard</a>
         <a href="prospectos.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="users" class="w-5 h-5"></i>Prospectos</a>
+        <a href="acciones.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="list" class="w-5 h-5"></i>Acciones</a>
         <a href="clientes.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="user-check" class="w-5 h-5"></i>Clientes</a>
-        <a href="agenda.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
         <a href="servicios.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="briefcase" class="w-5 h-5"></i>Servicios</a>
         <a href="agentes.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="bot" class="w-5 h-5"></i>Agentes</a>
+        <a href="landings.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="rocket" class="w-5 h-5"></i>Landings</a>
         <a href="marketing.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="image" class="w-5 h-5"></i>Material de Mkt</a>
+        <a href="agenda.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="calendar-check" class="w-5 h-5"></i>Agenda</a>
         <?php if ($is_admin): ?>
         <a href="usuarios.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="users" class="w-5 h-5"></i>Usuarios</a>
         <a href="configuracion.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl transition-all"><i data-lucide="settings" class="w-5 h-5"></i>Configuración</a>
@@ -123,6 +131,7 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
             <button id="tabBtn-resumen" class="top-tab active" onclick="showTab('resumen')">Resumen</button>
             <button id="tabBtn-turnos" class="top-tab" onclick="showTab('turnos')">Turnos</button>
             <button id="tabBtn-consolidada" class="top-tab" onclick="showTab('consolidada')">Agenda consolidada</button>
+            <button id="tabBtn-external-agents" class="top-tab" onclick="showTab('external-agents')">Agentes externos</button>
             <?php if ($is_admin): ?>
             <button id="tabBtn-config" class="top-tab" onclick="showTab('config')">Configuración</button>
             <?php endif; ?>
@@ -215,26 +224,6 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                 </div>
             </div>
 
-            <!-- Agentes externos -->
-            <div id="cfg-external-agents" class="cfg-panel hidden space-y-6">
-                <div class="card p-6">
-                    <h3 class="font-black text-slate-900 mb-4">Nuevo agente externo</h3>
-                    <p class="text-xs text-slate-400 mb-4 -mt-2">Referentes que comparten leads pero no tienen usuario en el sistema — solo se guardan sus datos de contacto para notificarlos.</p>
-                    <form id="externalAgentForm" class="grid md:grid-cols-3 gap-4">
-                        <input type="hidden" name="id">
-                        <div><label class="field-label">Nombre</label><input class="field-input" name="name" required></div>
-                        <div><label class="field-label">Teléfono</label><input class="field-input" name="phone" required></div>
-                        <div><label class="field-label">Email</label><input class="field-input" type="email" name="email"></div>
-                        <div class="md:col-span-3"><label class="field-label">Notas</label><input class="field-input" name="notes"></div>
-                        <div class="flex items-end"><label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input type="checkbox" name="active" checked class="w-4 h-4"> Activo</label></div>
-                        <div class="md:col-span-3 flex gap-3"><button type="submit" class="btn-primary">Guardar</button><button type="button" class="btn-secondary" onclick="resetForm('externalAgentForm')">Cancelar edición</button></div>
-                    </form>
-                </div>
-                <div class="card overflow-x-auto">
-                    <table class="simple w-full"><thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Activo</th><th></th></tr></thead><tbody id="externalAgentsBody"></tbody></table>
-                </div>
-            </div>
-
             <!-- Notificaciones -->
             <div id="cfg-notifications" class="cfg-panel hidden space-y-6">
                 <div class="card p-4 flex items-center gap-3 bg-blue-50/50 border-blue-100">
@@ -268,6 +257,26 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
 
         <!-- ============ AGENDA CONSOLIDADA ============ -->
         <div id="panel-consolidada" class="hidden space-y-6"></div>
+
+        <!-- ============ AGENTES EXTERNOS ============ -->
+        <div id="panel-external-agents" class="hidden space-y-6">
+            <div class="card p-6">
+                <h3 class="font-black text-slate-900 mb-4">Nuevo agente externo</h3>
+                <p class="text-xs text-slate-400 mb-4 -mt-2">Referentes que comparten leads pero no tienen usuario en el sistema — solo se guardan sus datos de contacto para notificarlos.</p>
+                <form id="externalAgentForm" class="grid md:grid-cols-3 gap-4">
+                    <input type="hidden" name="id">
+                    <div><label class="field-label">Nombre</label><input class="field-input" name="name" required></div>
+                    <div><label class="field-label">Teléfono</label><input class="field-input" name="phone" required></div>
+                    <div><label class="field-label">Email</label><input class="field-input" type="email" name="email"></div>
+                    <div class="md:col-span-3"><label class="field-label">Notas</label><input class="field-input" name="notes"></div>
+                    <div class="flex items-end"><label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input type="checkbox" name="active" checked class="w-4 h-4"> Activo</label></div>
+                    <div class="md:col-span-3 flex gap-3"><button type="submit" class="btn-primary">Guardar</button><button type="button" class="btn-secondary" onclick="resetForm('externalAgentForm')">Cancelar edición</button></div>
+                </form>
+            </div>
+            <div class="card overflow-x-auto">
+                <table class="simple w-full"><thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Activo</th><th></th></tr></thead><tbody id="externalAgentsBody"></tbody></table>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -306,11 +315,8 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                     <select id="mb-external-agent" class="field-input flex-1">
                         <option value="">Sin agente externo</option>
                     </select>
-                    <?php if ($is_admin): ?>
                     <button type="button" class="btn-secondary shrink-0" onclick="document.getElementById('mb-ea-quick').classList.toggle('hidden')" title="Crear agente externo nuevo">+ Nuevo</button>
-                    <?php endif; ?>
                 </div>
-                <?php if ($is_admin): ?>
                 <div id="mb-ea-quick" class="hidden mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                     <input id="mb-ea-quick-name" class="field-input" placeholder="Nombre del agente externo">
                     <input id="mb-ea-quick-phone" class="field-input" placeholder="Teléfono">
@@ -319,7 +325,6 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                         <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('mb-ea-quick').classList.add('hidden')">Cancelar</button>
                     </div>
                 </div>
-                <?php endif; ?>
             </div>
             <div><label class="field-label">Notas</label><input class="field-input" id="mb-notes"></div>
             <button class="btn-primary w-full" onclick="submitManualBooking()">Crear reserva</button>
@@ -379,6 +384,7 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
 <div id="toast" class="hidden fixed bottom-6 right-6 z-[300] px-4 py-3 rounded-xl font-medium text-xs shadow-2xl max-w-sm bg-slate-900 text-white items-center gap-2.5"></div>
 
 <script>
+const IS_ADMIN = <?php echo $is_admin ? 'true' : 'false'; ?>;
 lucide.createIcons();
 function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('hidden'); }
 async function logout() { fetch('api/auth.php?action=logout').then(() => window.location.href = 'login.php'); }
@@ -443,7 +449,7 @@ const TIMEZONE_OPTIONS = `
     </optgroup>`;
 
 // ── TABS ──
-const TABS = ['resumen', 'turnos', 'consolidada', 'config'];
+const TABS = ['resumen', 'turnos', 'consolidada', 'external-agents', 'config'];
 function showTab(tab) {
     TABS.forEach(t => {
         const panel = document.getElementById('panel-' + t);
@@ -454,11 +460,12 @@ function showTab(tab) {
     if (tab === 'resumen') loadResumen();
     else if (tab === 'turnos') loadBookings();
     else if (tab === 'consolidada') loadConsolidada();
+    else if (tab === 'external-agents') loadExternalAgents();
     else if (tab === 'config' && document.getElementById('tabBtn-config')) showConfigTab(currentConfigTab || 'branches');
 }
 
 const CFG_TABS = [
-    ['branches', 'Sucursales y Recursos'], ['links', 'Enlaces de reserva'], ['external-agents', 'Agentes externos'],
+    ['branches', 'Sucursales y Recursos'], ['links', 'Enlaces de reserva'],
     ['notifications', 'Notificaciones'], ['settings', 'Ajustes generales'],
 ];
 let currentConfigTab = 'branches';
@@ -466,7 +473,7 @@ document.getElementById('cfgPills').innerHTML = CFG_TABS.map(([id, label]) =>
     `<button class="cfg-pill" id="pill-${id}" onclick="showConfigTab('${id}')">${label}</button>`).join('');
 
 const CFG_LOADERS = {
-    branches: loadDrillDown, links: loadLinks, 'external-agents': loadExternalAgents,
+    branches: loadDrillDown, links: loadLinks,
     notifications: loadNotificationRules, settings: loadSettings,
 };
 function showConfigTab(tab) {
@@ -1148,9 +1155,35 @@ async function loadBookings() {
 async function cancelBooking(id) { if (!(await showConfirm('¿Cancelar esta reserva?'))) return; await apiPost('api/agenda-bookings.php', { action: 'cancel', id }); loadBookings(); }
 
 // ── MODAL: NUEVA RESERVA MANUAL ──
+function manualBookingSetupIssue() {
+    if (!cache.branches.length) return { message: 'Todavía no hay ninguna sucursal creada.', resourceId: null };
+    const activeResources = cache.resources.filter(r => parseInt(r.active));
+    if (!activeResources.length) return { message: 'Todavía no hay ningún recurso creado.', resourceId: null };
+    const ready = activeResources.filter(r => r.service_ids.length > 0 && parseInt(r.schedule_count) > 0);
+    if (ready.length) return null;
+    const withoutServices = activeResources.find(r => !r.service_ids.length);
+    if (withoutServices) return { message: `El recurso "${withoutServices.name}" todavía no tiene ningún servicio asignado.`, resourceId: withoutServices.id };
+    const withoutSchedule = activeResources.find(r => !parseInt(r.schedule_count));
+    return { message: `El recurso "${withoutSchedule.name}" todavía no tiene horarios cargados.`, resourceId: withoutSchedule.id };
+}
+
 async function openManualBookingModal() {
     await refreshCatalog();
-    document.getElementById('mb-resource').innerHTML = cache.resources.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+    const issue = manualBookingSetupIssue();
+    if (issue) {
+        if (IS_ADMIN) {
+            showToast(issue.message + ' Te llevamos a completarlo.');
+            showTab('config');
+            showConfigTab('branches');
+            if (issue.resourceId) drillGoResourceDetail(issue.resourceId);
+            else drillGoBranches();
+        } else {
+            showToast(issue.message + ' Pedile al administrador que lo complete.');
+        }
+        return;
+    }
+    const readyResources = cache.resources.filter(r => parseInt(r.active) && r.service_ids.length > 0 && parseInt(r.schedule_count) > 0);
+    document.getElementById('mb-resource').innerHTML = readyResources.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
     document.getElementById('mb-date').value = new Date().toISOString().slice(0, 10);
     document.getElementById('mb-name').value = ''; document.getElementById('mb-phone').value = ''; document.getElementById('mb-email').value = ''; document.getElementById('mb-notes').value = '';
     await loadManualExternalAgents();
