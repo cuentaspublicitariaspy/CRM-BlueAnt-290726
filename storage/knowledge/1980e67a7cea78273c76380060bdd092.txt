@@ -1,5 +1,0 @@
-streamlit
-openai>=1.2.0
-pydub
-gtts
-streamlit-audiorecorder
