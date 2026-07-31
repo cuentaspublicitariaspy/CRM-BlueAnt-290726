@@ -24,13 +24,29 @@ class AgendaMailService {
         $mail->Password = $config['password'];
         $mail->Port = (int)$config['port'];
 
-        if (($config['encryption'] ?? 'tls') === 'ssl') {
+        // El puerto 465 es siempre SSL implícito (nunca STARTTLS) — si alguien
+        // carga 465 con encryption=tls por error (mezcla muy común, ej. con
+        // proveedores tipo Hostinger que ofrecen 465/SSL y 587/TLS), forzarlo
+        // igual rompe la conexión: PHPMailer intenta negociar STARTTLS contra
+        // un socket que ya espera TLS desde el primer byte, y sin timeout
+        // corto eso cuelga el request varios minutos hasta que el gateway lo
+        // corta (504) — la reserva ya se guardó, pero la respuesta nunca vuelve.
+        $encryption = $config['encryption'] ?? 'tls';
+        if ($mail->Port === 465) {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        } elseif (($config['encryption'] ?? 'tls') === 'tls') {
+        } elseif ($encryption === 'ssl') {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        } elseif ($encryption === 'tls') {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         } else {
             $mail->SMTPAutoTLS = false;
         }
+
+        // Timeout corto de conexión: sin esto, PHPMailer espera hasta 300s por
+        // defecto ante un SMTP mal configurado o inalcanzable, colgando el
+        // request de creación de la reserva (que dispara el email inline).
+        $mail->Timeout = 15;
+        $mail->SMTPKeepAlive = false;
 
         // Evitar fallos de cURL/SSL por certificados en entornos locales (XAMPP/Windows)
         $isLocal = (strpos(__DIR__, 'xampp') !== false) ||
