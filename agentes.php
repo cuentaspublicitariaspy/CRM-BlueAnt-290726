@@ -504,7 +504,7 @@ if ($action === 'intel') {
                 <input type="text" id="newAgentName" required maxlength="100" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: Soporte Ventas"></div>
             <div><label class="block text-sm font-medium text-slate-700 mb-1">Prompt del sistema</label>
                 <textarea id="newAgentPrompt" rows="4" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Eres un asistente experto en...">Eres un asistente util y amable. Respondes preguntas sobre productos y servicios de la empresa.</textarea></div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><label class="block text-sm font-medium text-slate-700 mb-1">Modelo</label>
                     <select id="newAgentModel" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                         <option value="gpt-4o-mini" selected>GPT-4o Mini (OpenAI) ? Rápido y económico</option>

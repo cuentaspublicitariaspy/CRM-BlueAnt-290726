@@ -624,7 +624,7 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
             };
             const stageColor = { 'new':'bg-slate-100 text-slate-500', 'cold':'bg-blue-100 text-blue-700', 'warm':'bg-amber-100 text-amber-700', 'hot':'bg-orange-100 text-orange-700', 'qualified':'bg-green-100 text-green-700', 'closed':'bg-gray-100 text-gray-500' };
             const sc = stageColor[p.status] || 'bg-slate-100 text-slate-500';
-            var html = '<div class="grid grid-cols-2 gap-3 text-sm">' +
+            var html = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">' +
                 '<div class="bg-slate-50 p-3 rounded-lg"><span class="text-xs text-slate-400 block">Nombre</span><span class="font-medium">' + escapeHtml(p.name || '-') + '</span></div>' +
                 '<div class="bg-slate-50 p-3 rounded-lg"><span class="text-xs text-slate-400 block">Email</span><span class="font-medium">' + escapeHtml(p.email || '-') + '</span></div>' +
                 '<div class="bg-slate-50 p-3 rounded-lg"><span class="text-xs text-slate-400 block">WhatsApp</span><span class="font-medium">' + escapeHtml(p.whatsapp || '-') + '</span></div>' +

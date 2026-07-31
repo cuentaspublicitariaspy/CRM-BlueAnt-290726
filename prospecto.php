@@ -322,6 +322,7 @@ $interestData = calcularInterestLevel($prospect);
         <!-- Header -->
         <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 bg-white sticky top-0 z-40">
             <div class="flex items-center gap-4">
+                <button onclick="toggleMenu()" class="lg:hidden p-2 text-slate-500"><i data-lucide="menu" class="w-6 h-6"></i></button>
                 <button onclick="goBack()" class="p-2 text-slate-400 hover:text-slate-900 transition-colors">
                     <i data-lucide="chevron-left" class="w-6 h-6"></i>
                 </button>
@@ -446,7 +447,7 @@ $interestData = calcularInterestLevel($prospect);
                         <i data-lucide="map-pin" class="text-blue-600"></i> Ubicación e Idioma
                     </h3>
                     
-                    <div class="grid grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
                             <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Idioma de contacto</span>
                             <span class="text-sm font-semibold text-slate-800 uppercase"><?php echo htmlspecialchars($prospect['language'] ?: 'es'); ?></span>
@@ -512,8 +513,8 @@ $interestData = calcularInterestLevel($prospect);
                                     <i data-lucide="credit-card" class="w-4 h-4 text-slate-400 shrink-0"></i>
                                     <span>DATOS DE FACTURación</span>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2 text-sm font-semibold text-slate-800">
-                                    <div class="col-span-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm font-semibold text-slate-800">
+                                    <div class="sm:col-span-2">
                                         <span class="text-[10px] text-slate-400 block font-normal">Número de tarjeta</span>
                                         <span>
                                             <?php 

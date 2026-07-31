@@ -187,7 +187,10 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
 
     <main class="flex-1 flex flex-col min-w-0">
         <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 bg-white sticky top-0 z-40">
-            <h1 class="text-xl font-bold text-slate-900">Configuración Global del Sistema</h1>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMenu()" class="lg:hidden p-2 text-slate-500"><i data-lucide="menu" class="w-6 h-6"></i></button>
+                <h1 class="text-xl font-bold text-slate-900">Configuración Global del Sistema</h1>
+            </div>
         </header>
 
         <div class="p-6 lg:p-10 max-w-2xl mx-auto w-full space-y-8">

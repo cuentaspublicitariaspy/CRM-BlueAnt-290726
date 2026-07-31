@@ -57,7 +57,7 @@ $emails = $hasUsers ? $pdo->query("SELECT id, email, name, role FROM users ORDER
 <html lang="es">
 <head><meta charset="UTF-8"><title>Reset Password</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://cdn.tailwindcss.com" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
 <style>body{background:#f1f5f9;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}</style>
 </head>
 <body>

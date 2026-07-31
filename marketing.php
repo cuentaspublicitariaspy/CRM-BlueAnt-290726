@@ -249,7 +249,7 @@ if ($is_admin) {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="space-y-2">
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pos X Final (px)</label>
                             <input type="number" id="qr_x" name="qr_x" required readonly class="w-full bg-slate-100 text-slate-500 border border-slate-200 rounded-xl p-3 outline-none cursor-not-allowed font-mono text-sm">

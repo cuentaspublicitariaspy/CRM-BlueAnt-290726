@@ -216,6 +216,7 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
             <!-- Header Integrado -->
             <div class="p-4 md:p-8 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
                 <div class="flex items-center space-x-3">
+                    <button onclick="toggleMenu()" class="lg:hidden p-2 -ml-2 text-slate-500"><i data-lucide="menu" class="w-6 h-6"></i></button>
                     <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Gestión de Usuarios</h2>
                     <span id="user-count-badge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">0</span>
                 </div>

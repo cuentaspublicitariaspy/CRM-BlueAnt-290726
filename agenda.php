@@ -304,7 +304,7 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
                 <label class="field-label">Horario</label>
                 <div id="mb-slots" class="flex flex-wrap gap-2 max-h-40 overflow-y-auto"></div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label class="field-label">Nombre</label><input class="field-input" id="mb-name"></div>
                 <div><label class="field-label">Teléfono</label><input class="field-input" id="mb-phone"></div>
             </div>
@@ -554,7 +554,7 @@ async function renderDrillBranches() {
                         </div>
                         <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(b.city || 'Sin ciudad')} · ${escapeHtml(b.timezone)}</p>
                     </div>
-                    <div class="text-center px-3 shrink-0">
+                    <div class="hidden sm:block text-center px-3 shrink-0">
                         <div class="text-lg font-black text-slate-800">${resCount}</div>
                         <div class="text-[9px] uppercase tracking-widest text-slate-400 font-bold">Recursos</div>
                     </div>
@@ -562,7 +562,7 @@ async function renderDrillBranches() {
                         <button class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600" onclick='editBranch(${JSON.stringify(b)})' title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
                         <button class="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-600" onclick="deleteBranch(${b.id})" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
-                    <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300 shrink-0"></i>
+                    <i data-lucide="chevron-right" class="hidden sm:block w-5 h-5 text-slate-300 shrink-0"></i>
                 </div>`;
             }).join('') || '<div class="card p-10 text-center text-slate-400">Sin sucursales todavía — creá la primera arriba</div>'}
         </div>`;
@@ -617,7 +617,7 @@ async function renderDrillResources() {
                         <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
                             <button class="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-600" onclick="deleteResourceFromDrill(${r.id})" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </div>
-                        <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300 shrink-0"></i>
+                        <i data-lucide="chevron-right" class="hidden sm:block w-5 h-5 text-slate-300 shrink-0"></i>
                     </div>
                 </div>`;
             }).join('') || '<div class="card p-10 text-center text-slate-400">Sin recursos todavía — creá el primero arriba</div>'}
@@ -724,7 +724,7 @@ async function renderDrillResourceDetail() {
             </form>
             <div class="mb-6">
                 <h4 class="font-bold text-sm text-slate-700 mb-2">Horarios recurrentes</h4>
-                <form id="rdScheduleForm" class="grid grid-cols-3 gap-2 mb-4 max-w-xl">
+                <form id="rdScheduleForm" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 max-w-xl">
                     <select name="weekday" class="field-input" required>
                         <option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option>
                         <option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option>
