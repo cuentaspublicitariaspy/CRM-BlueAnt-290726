@@ -307,9 +307,18 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
                 </div>
             </div>
 
+            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 mb-6">
+                Email y SMS son canales <span class="font-bold">independientes</span>: configurá y guardá solo el que vayas a usar, no hace falta completar los dos ni hacerlo en un orden particular.
+            </p>
+
+            <div class="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-2xl w-fit">
+                <button type="button" onclick="switchAgendaChannelTab('smtp')" id="agendaTabBtnSmtp" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all">Email (SMTP)</button>
+                <button type="button" onclick="switchAgendaChannelTab('sms')" id="agendaTabBtnSms" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all">SMS (Twilio)</button>
+            </div>
+
             <div class="space-y-10">
                 <!-- SMTP -->
-                <div>
+                <div id="agendaPanelSmtp">
                     <div class="flex items-center justify-between mb-4">
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email (SMTP)</label>
                         <span id="agendaSmtpBadge" class="text-xs font-bold"></span>
@@ -334,7 +343,7 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
                 </div>
 
                 <!-- SMS (Twilio) -->
-                <div>
+                <div id="agendaPanelSms">
                     <div class="flex items-center justify-between mb-4">
                         <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">SMS (Twilio)</label>
                         <span id="agendaSmsBadge" class="text-xs font-bold"></span>
@@ -568,6 +577,20 @@ if (!$is_admin) { header('Location: index.php'); exit(); }
             } catch (err) { showToast('❌ Error al guardar', true); }
             btn.disabled = false; btn.textContent = 'Guardar SMS';
         }
+
+        function switchAgendaChannelTab(tab) {
+            const panels = { smtp: document.getElementById('agendaPanelSmtp'), sms: document.getElementById('agendaPanelSms') };
+            const btns = { smtp: document.getElementById('agendaTabBtnSmtp'), sms: document.getElementById('agendaTabBtnSms') };
+            for (const key of ['smtp', 'sms']) {
+                const active = key === tab;
+                panels[key].style.display = active ? '' : 'none';
+                btns[key].className = active
+                    ? 'px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-blue-600 shadow'
+                    : 'px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+            }
+            localStorage.setItem('agendaChannelTab', tab);
+        }
+        switchAgendaChannelTab(localStorage.getItem('agendaChannelTab') || 'smtp');
 
         fetchSettings();
         fetchAgendaSmtp();
