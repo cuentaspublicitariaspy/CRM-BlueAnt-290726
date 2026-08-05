@@ -17,6 +17,10 @@ uploads/
 storage/logs/
 storage/tmp/
 storage/knowledge/
+landings_gen/*
+!landings_gen/1779310520_landingAgustin.html
+!landings_gen/1779548445_Herbalife-LifeStyle.html
+!landings_gen/1779577514_agustinromero.html
 
 # Composer / Node
 node_modules/

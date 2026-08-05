@@ -1,283 +1,79 @@
-<?php
-session_start();
-header('Content-Type: application/json');
-require_once 'config.php';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sigamos en Contacto - Agustín Romero</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-blue-ant { background-color: #0d1b37; }
+        .text-blue-ant { color: #0d1b37; }
+        .gradient-bg { background: linear-gradient(135deg, #0d1b37 0%, #1e3a8a 100%); }
+        /* Ajuste para asegurar que no haya scroll */
+        body { height: 100vh; overflow: hidden; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans flex items-center justify-center p-2">
 
-if (!isset($_SESSION['user_id'])) { http_response_code(401); echo json_encode(['error' => 'No autorizado']); exit; }
-$user_id = (int)$_SESSION['user_id'];
+    <main class="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+        <!-- Header compacto -->
+        <div class="gradient-bg pt-3 pb-2 flex flex-col items-center shadow-inner relative">
+            <img src="https://blueantwealth.com/wp-content/uploads/2025/06/blue-ant-wealth.png" alt="Logo Blue Ant Associates" class="h-12 w-auto mb-2">
+            <div class="w-20 h-20 rounded-full border-2 border-white shadow-md overflow-hidden">
+                <img src="https://srcomunicaciones.net/blueant/wp-content/uploads/2025/01/Agustin-Romero-1.png" alt="Agustín Romero" class="w-full h-full object-cover">
+            </div>
+            <h2 class="text-white font-bold text-sm mt-1">Agustín Romero</h2>
+        </div>
 
-// === RUTAS ABSOLUTAS CONFIRMADAS ===
-$UPLOAD_DIR = dirname(dirname(__FILE__)) . '/landings_gen/';
+        <!-- Contenido compacto -->
+        <div class="p-4 text-center">
+            <h1 class="text-xl font-extrabold text-blue-ant mb-2">Sigamos en contacto</h1>
+            <p class="text-slate-600 text-sm mb-4 leading-snug">
+                Un gusto coincidir hoy. Si te interesa explorar una colaboración profesional o asesoría en <b>Tax Planning</b>, conversemos.
+            </p>
+            
+            <button id="ctaButton" class="w-full bg-blue-ant text-white font-bold text-sm py-3 rounded-xl hover:bg-blue-900 transition-all shadow-md">
+                Intercambiemos contacto
+            </button>
 
-if (!is_dir($UPLOAD_DIR)) @mkdir($UPLOAD_DIR, 0755, true);
+            <!-- Formulario ultra compacto -->
+            <div id="formContainer" class="hidden space-y-2 text-left pt-2">
+                <form id="contactForm" class="space-y-2">
+                    <input type="text" placeholder="Nombre" required class="w-full p-2 text-sm border rounded-lg outline-none">
+                    <input type="email" placeholder="Email" required class="w-full p-2 text-sm border rounded-lg outline-none">
+                    <input type="tel" placeholder="WhatsApp" required class="w-full p-2 text-sm border rounded-lg outline-none">
+                    <div class="flex gap-2">
+                        <input type="text" placeholder="Industria" required class="w-full p-2 text-sm border rounded-lg outline-none">
+                        <input type="text" placeholder="Estado" required class="w-full p-2 text-sm border rounded-lg outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-ant text-white font-bold py-2 text-sm rounded-lg hover:bg-blue-900">Enviar</button>
+                </form>
+            </div>
 
-// Asegurar tabla landings
-// Asegurar tabla y columnas
-try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS landings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
-} catch (Exception $e) {}
+            <div id="successMessage" class="hidden py-4 text-center">
+                <p class="text-blue-ant font-bold">¡Qué bueno conectar!</p>
+                <p class="text-slate-600 text-sm">Hablamos pronto.</p>
+            </div>
+        </div>
+    </main>
 
-// Migraciones: agregar columnas si no existen
-foreach ([
-    "ALTER TABLE landings ADD COLUMN user_id INT NOT NULL DEFAULT 1 AFTER id",
-    "ALTER TABLE landings ADD COLUMN filename VARCHAR(255)",
-    "ALTER TABLE landings ADD COLUMN views INT DEFAULT 0",
-    "ALTER TABLE landings ADD COLUMN color VARCHAR(50) DEFAULT '#3b82f6'",
-] as $sql) { try { $pdo->exec($sql); } catch (Exception $e) {} }
+    <script>
+        const ctaButton = document.getElementById('ctaButton');
+        const formContainer = document.getElementById('formContainer');
+        const form = document.getElementById('contactForm');
+        const successMessage = document.getElementById('successMessage');
 
-// ==============================
-//   ACCION: ACTUALIZAR DATOS (Título, Desc, Color)
-// ==============================
-if (isset($_GET['action']) && $_GET['action'] === 'update') {
-    $id    = (int)($_GET['id'] ?? 0);
-    $title = trim($_GET['title'] ?? '');
-    $desc  = trim($_GET['description'] ?? '');
-    $color = trim($_GET['color'] ?? '');
-    
-    if ($id > 0 && $title) {
-        $pdo->prepare("UPDATE landings SET title = ?, description = ?, color = ? WHERE id = ? AND user_id = ?")
-            ->execute([$title, $desc, $color, $id, $user_id]);
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['error' => 'Datos incompletos']);
-    }
-    exit;
-}
+        ctaButton.addEventListener('click', () => {
+            ctaButton.classList.add('hidden');
+            formContainer.classList.remove('hidden');
+        });
 
-// ==============================
-//   ACCION: ACTUALIZAR COLOR (Mantener por retrocompatibilidad o quitar si ya se usa update)
-// ==============================
-if (isset($_GET['action']) && $_GET['action'] === 'update_color') {
-    $id = (int)($_GET['id'] ?? 0);
-    $color = trim($_GET['color'] ?? '');
-    if ($id > 0 && $color) {
-        $pdo->prepare("UPDATE landings SET color = ? WHERE id = ? AND user_id = ?")->execute([$color, $id, $user_id]);
-        echo json_encode(['success' => true]);
-    }
-    exit;
-}
-
-// ==============================
-//   BORRAR  GET ?action=delete&id=X
-// ==============================
-if (isset($_GET['action']) && $_GET['action'] === 'delete') {
-    $id = (int)($_GET['id'] ?? 0);
-    if ($id > 0) {
-        $stmt = $pdo->prepare("SELECT filename FROM landings WHERE id = ? AND user_id = ?");
-        $stmt->execute([$id, $user_id]);
-        $fn = $stmt->fetchColumn();
-        if ($fn) {
-            $filepath = $UPLOAD_DIR . $fn;
-            if (file_exists($filepath)) @unlink($filepath);
-        }
-        $pdo->prepare("DELETE FROM landings WHERE id = ? AND user_id = ?")->execute([$id, $user_id]);
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['error' => 'ID inválido']);
-    }
-    exit;
-}
-
-// ==============================
-//   LISTAR  GET
-// ==============================
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    try {
-        // Crear tabla de suscripciones si no existe
-        $pdo->exec("CREATE TABLE IF NOT EXISTS landing_subscriptions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            landing_id INT NOT NULL,
-            user_id INT NOT NULL,
-            token VARCHAR(32) UNIQUE NOT NULL,
-            views INT DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_lu (landing_id, user_id)
-        )");
-
-        // Migración para redirecciones
-        foreach ([
-            "ALTER TABLE landing_subscriptions ADD COLUMN redirect_type ENUM('default', 'url', 'whatsapp') DEFAULT 'default'",
-            "ALTER TABLE landing_subscriptions ADD COLUMN redirect_url VARCHAR(255) NULL",
-            "ALTER TABLE landing_subscriptions ADD COLUMN whatsapp_number VARCHAR(50) NULL",
-            "ALTER TABLE landing_subscriptions ADD COLUMN whatsapp_message TEXT NULL",
-        ] as $sql) { try { $pdo->exec($sql); } catch (Exception $e) {} }
-
-        $user_role = $_SESSION['user_role'] ?? 'subscriber';
-
-        if ($user_role === 'admin') {
-            // ADMIN: ve TODAS las landings con stats globales
-            // Auto-sync carpeta
-            $files = @scandir($UPLOAD_DIR);
-            if ($files) {
-                foreach ($files as $file) {
-                    if ($file === '.' || $file === '..') continue;
-                    if (strtolower(pathinfo($file, PATHINFO_EXTENSION)) !== 'html') continue;
-                    $chk = $pdo->prepare("SELECT COUNT(*) FROM landings WHERE filename = ?");
-                    $chk->execute([$file]);
-                    if ((int)$chk->fetchColumn() === 0) {
-                        $name = preg_replace('/^\d+_?/', '', pathinfo($file, PATHINFO_FILENAME));
-                        $name = str_replace(['_','-'], ' ', $name);
-                        $pdo->prepare("INSERT IGNORE INTO landings (user_id, title, description, filename) VALUES (?, ?, 'Importado automáticamente', ?)")
-                            ->execute([$user_id, ucwords($name), $file]);
-                    }
-                }
-            }
-
-            $stmt = $pdo->query("SELECT * FROM landings ORDER BY id DESC");
-            $landings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($landings as &$l) {
-                // Obtener slug del admin (propietario de la landing)
-                $adminStmt = $pdo->prepare("SELECT slug, name FROM users WHERE id = ?");
-                $adminStmt->execute([$l['user_id']]);
-                $adminRow = $adminStmt->fetch(PDO::FETCH_ASSOC);
-                $adminSlug = ($adminRow && $adminRow['slug']) ? $adminRow['slug'] : 'usuario-' . $l['user_id'];
-                $adminName = $adminRow ? $adminRow['name'] : 'Admin';
-
-                // URL pública: siempre vía landings_gen.php (nunca el archivo estático directo,
-                // que puede no existir en el servidor si no fue sincronizado con el deploy)
-                $ownerUrl = CRM_URL . '/landings_gen/' . urlencode($adminSlug) . '?lp=' . $l['id'];
-                $l['url']         = $ownerUrl;
-                $l['url_display'] = str_replace(['http://', 'https://'], '', $ownerUrl);
-                $l['can_delete']  = true;
-                $l['is_admin']    = true;
-
-                // Stats globales (todos los suscriptores sumados)
-                $sv = $pdo->prepare("SELECT COALESCE(SUM(views),0) FROM landing_subscriptions WHERE landing_id = ?");
-                $sv->execute([$l['id']]);
-                $l['views'] = (int)$sv->fetchColumn();
-
-                $sp = $pdo->prepare("SELECT COUNT(*) FROM prospects WHERE landing_id = ?");
-                $sp->execute([$l['id']]);
-                $l['prospect_count'] = (int)$sp->fetchColumn();
-
-                $v = $l['views'];
-                $p = $l['prospect_count'];
-                $l['conversion_rate'] = ($v > 0) ? round(($p / $v) * 100, 1) : 0;
-
-                // Número de suscriptores activos
-                $sc = $pdo->prepare("SELECT COUNT(*) FROM landing_subscriptions WHERE landing_id = ?");
-                $sc->execute([$l['id']]);
-                $l['subscriber_count'] = (int)$sc->fetchColumn();
-
-                // URLs de cada suscriptor para esta landing
-                $subStmt = $pdo->prepare("
-                    SELECT u.name, u.slug, u.id AS uid
-                    FROM landing_subscriptions ls
-                    JOIN users u ON ls.user_id = u.id
-                    WHERE ls.landing_id = ?
-                ");
-                $subStmt->execute([$l['id']]);
-                $subs = [];
-                while ($s = $subStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $slug = $s['slug'] ?: 'usuario-' . $s['uid'];
-                    $subUrl = CRM_URL . '/landings_gen/' . urlencode($slug) . '?lp=' . $l['id'];
-                    $subs[] = [
-                        'name'        => $s['name'],
-                        'slug'        => $slug,
-                        'url'         => $subUrl,
-                        'url_display' => str_replace(['http://', 'https://'], '', $subUrl),
-                    ];
-                }
-                // Si no hay suscriptores, mostrar la URL del admin como preview
-                if (empty($subs)) {
-                    $subs[] = [
-                        'name'        => $adminName . ' (tú)',
-                        'slug'        => $adminSlug,
-                        'url'         => $ownerUrl,
-                        'url_display' => $l['url_display'],
-                    ];
-                }
-                $l['subscriber_urls'] = $subs;
-            }
-        } else {
-            // SUSCRIPTOR: ve SOLO las landings que el admin le asignó explícitamente
-            $stmt = $pdo->prepare("
-                SELECT l.*, ls.token, ls.views AS sub_views, ls.id AS sub_id
-                FROM landings l
-                INNER JOIN landing_subscriptions ls ON l.id = ls.landing_id AND ls.user_id = ?
-                ORDER BY l.id DESC
-            ");
-            $stmt->execute([$user_id]);
-            $landings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Obtener slug del suscriptor para la URL pública
-            $stmtSlug = $pdo->prepare("SELECT slug FROM users WHERE id = ?");
-            $stmtSlug->execute([$user_id]);
-            $userSlug = $stmtSlug->fetchColumn() ?: 'usuario-' . $user_id;
-
-            foreach ($landings as &$l) {
-                $l['can_delete'] = false;
-                $l['is_admin']   = false;
-
-                // URL pública del suscriptor: landings_gen/{slug}?lp={landing_id}
-                $l['url']         = CRM_URL . '/landings_gen/' . urlencode($userSlug) . '?lp=' . $l['id'];
-                $l['url_display'] = str_replace(['http://', 'https://'], '', CRM_URL) . '/landings_gen/' . urlencode($userSlug) . '?lp=' . $l['id'];
-
-                // Stats PERSONALES del suscriptor (desde landing_subscriptions)
-                $l['views'] = (int)($l['sub_views'] ?? 0);
-
-                $sp = $pdo->prepare("SELECT COUNT(*) FROM prospects WHERE landing_id = ? AND user_id = ?");
-                $sp->execute([$l['id'], $user_id]);
-                $l['prospect_count'] = (int)$sp->fetchColumn();
-
-                $v = $l['views'];
-                $p = $l['prospect_count'];
-                $l['conversion_rate'] = ($v > 0) ? round(($p / $v) * 100, 1) : 0;
-            }
-        }
-
-        echo json_encode($landings);
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-    exit;
-}
-
-// ==============================
-//   SUBIR  POST multipart
-// ==============================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
-    // Solo admins pueden subir landings
-    if (($_SESSION['user_role'] ?? 'subscriber') !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'No tenés permisos para subir landings']);
-        exit;
-    }
-    $title = trim($_POST['title'] ?? '');
-    $desc  = trim($_POST['description'] ?? '');
-    $color = trim($_POST['color'] ?? '#3b82f6');
-    $file  = $_FILES['landing_file'];
-
-    if (empty($title)) { echo json_encode(['error' => 'El título es obligatorio']); exit; }
-    if ($file['error'] !== UPLOAD_ERR_OK) { echo json_encode(['error' => 'Error en la subida: código ' . $file['error']]); exit; }
-
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if ($ext !== 'html') { echo json_encode(['error' => 'Solo se aceptan archivos .html']); exit; }
-
-    $fn   = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', basename($file['name']));
-    $path = $UPLOAD_DIR . $fn;
-
-    if (!move_uploaded_file($file['tmp_name'], $path)) {
-        echo json_encode(['error' => 'No se pudo guardar el archivo en: ' . $UPLOAD_DIR]);
-        exit;
-    }
-
-    $stmt = $pdo->prepare("INSERT INTO landings (user_id, title, description, filename, color) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$user_id, $title, $desc, $fn, $color]);
-    $landing_id = (int)$pdo->lastInsertId();
-
-    // Inyectar modal de registro + tracker en el HTML
-    $html = file_get_contents($path);
-    if ($html !== false) {
-        $crmUrl = CRM_URL;
-        $inject = <<<HTML
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            formContainer.classList.add('hidden');
+            successMessage.classList.remove('hidden');
+        });
+    </script>
 
 <!-- ===== CRM ULTRA INJECTED ===== -->
 <style>
@@ -357,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
 
 <script>
 (function(){
-  var LID = $landing_id;
+  var LID = 15;
   var base = window.location.origin + window.location.pathname.split('/landings_gen/')[0].split('/l.php')[0];
   var API = base + '/api/prospects.php';
   var STATS = base + '/api/landings_stats.php';
@@ -550,16 +346,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
 })();
 </script>
 <!-- ===== /CRM ULTRA ===== -->
-HTML;
-        $html_out = (stripos($html, '</body>') !== false)
-            ? str_ireplace('</body>', $inject . "\n</body>", $html)
-            : $html . $inject;
-        file_put_contents($path, $html_out);
-    }
-
-    echo json_encode(['success' => true, 'id' => $landing_id]);
-    exit;
-}
-
-echo json_encode(['error' => 'Método no permitido']);
-?>
+</body>
+</html>

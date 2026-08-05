@@ -1,283 +1,137 @@
-<?php
-session_start();
-header('Content-Type: application/json');
-require_once 'config.php';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transforma tu Vida | Sistema de Bienestar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .glass-effect { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .card-shadow { box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 leading-tight">
 
-if (!isset($_SESSION['user_id'])) { http_response_code(401); echo json_encode(['error' => 'No autorizado']); exit; }
-$user_id = (int)$_SESSION['user_id'];
+    <!-- Menú de navegación alineado -->
+    <nav class="fixed w-full z-40 glass-effect border-b border-gray-100 h-16 flex items-center">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div class="flex justify-between items-center h-full">
+                <div class="flex items-center">
+                    <span class="text-xl font-extrabold text-green-600 tracking-tighter">VITAL<span class="text-gray-800">COACH</span></span>
+                </div>
+                <div class="flex items-center space-x-8">
+                    <div class="hidden md:flex items-center space-x-6 text-sm font-semibold text-gray-600">
+                        <a href="#metodo" class="hover:text-green-600 transition">Método</a>
+                        <a href="#comunidad" class="hover:text-green-600 transition">Comunidad</a>
+                    </div>
+                    <button class="bg-green-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-md shadow-green-200">
+                        Acceso VIP
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-// === RUTAS ABSOLUTAS CONFIRMADAS ===
-$UPLOAD_DIR = dirname(dirname(__FILE__)) . '/landings_gen/';
+    <header class="relative pt-24 pb-8 lg:pt-32 lg:pb-12 overflow-hidden bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
+                <div class="text-center lg:text-left">
+                    <span class="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-green-700 uppercase bg-green-100 rounded-full">
+                        Tu mejor versión comienza hoy
+                    </span>
+                    <h1 class="text-3xl md:text-5xl font-extrabold text-gray-900 leading-[1.1] mb-4">
+                        Recupera tu <span class="text-green-600">energía</span> y alcanza tu peso ideal.
+                    </h1>
+                    <p class="text-base md:text-lg text-gray-600 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                        No es solo nutrición, es un estilo de vida. Te ayudamos con planes personalizados, comunidad de apoyo y el mejor respaldo nutricional del mundo.
+                    </p>
+                    <div class="flex justify-center lg:justify-start">
+                        <button class="px-8 py-3.5 bg-green-600 text-white font-bold rounded-xl shadow-xl shadow-green-200">
+                            ¡Quiero mi evaluación GRATIS!
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-8 lg:mt-0 hidden md:block relative">
+                    <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                         alt="Fitness Lifestyle" 
+                         class="rounded-3xl shadow-2xl max-h-[380px] w-full object-cover border-8 border-white">
+                </div>
+            </div>
+        </div>
+    </header>
 
-if (!is_dir($UPLOAD_DIR)) @mkdir($UPLOAD_DIR, 0755, true);
+    <!-- Sección de Beneficios fiel a la captura -->
+    <section id="metodo" class="py-10 bg-gray-50/30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Card 1: Plan Nutricional -->
+                <div class="bg-white p-7 rounded-2xl border border-gray-100 card-shadow flex flex-col items-start hover:border-green-200 transition">
+                    <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mb-5 shadow-lg shadow-green-100 text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Plan Nutricional</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Guías personalizadas basadas en la ciencia para que nunca pases hambre mientras logras tus metas.</p>
+                </div>
+                <!-- Card 2: Comunidad 24/7 -->
+                <div class="bg-white p-7 rounded-2xl border border-gray-100 card-shadow flex flex-col items-start hover:border-green-200 transition">
+                    <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mb-5 shadow-lg shadow-green-100 text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Comunidad 24/7</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">No estarás solo. Grupos de motivación y apoyo constante para que mantengas la disciplina.</p>
+                </div>
+                <!-- Card 3: Suplementación Premium -->
+                <div class="bg-white p-7 rounded-2xl border border-gray-100 card-shadow flex flex-col items-start hover:border-green-200 transition">
+                    <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mb-5 shadow-lg shadow-green-100 text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Suplementación Premium</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Acceso a los productos de nutrición número 1 del mundo para optimizar tu salud celular.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-// Asegurar tabla landings
-// Asegurar tabla y columnas
-try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS landings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
-} catch (Exception $e) {}
+    <!-- Sección de Video de Fondo -->
+    <section id="comunidad" class="relative h-[450px] flex items-center justify-center overflow-hidden">
+        <video autoplay muted loop playsinline class="absolute z-0 min-w-full min-h-full object-cover">
+            <source src="https://vendiendoeninternet.com/prospeccion/gente_joven_entrenando_al_aire_202605091321.mp4" type="video/mp4">
+            Tu navegador no soporta videos.
+        </video>
+        <div class="absolute inset-0 bg-black/50 z-10"></div>
+        
+        <div class="relative z-20 text-center px-4 max-w-3xl mx-auto">
+            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
+                Únete a un movimiento de <span class="text-green-400">bienestar global</span>
+            </h2>
+            <p class="text-white/90 text-lg md:text-xl mb-8 font-light">
+                Entrena, aliméntate y crece con personas que tienen tus mismos objetivos. El entorno es la clave de tu éxito.
+            </p>
+            <button class="px-8 py-3.5 bg-white text-gray-900 font-bold rounded-xl shadow-2xl">
+                Descubre Nuestra Comunidad
+            </button>
+        </div>
+    </section>
 
-// Migraciones: agregar columnas si no existen
-foreach ([
-    "ALTER TABLE landings ADD COLUMN user_id INT NOT NULL DEFAULT 1 AFTER id",
-    "ALTER TABLE landings ADD COLUMN filename VARCHAR(255)",
-    "ALTER TABLE landings ADD COLUMN views INT DEFAULT 0",
-    "ALTER TABLE landings ADD COLUMN color VARCHAR(50) DEFAULT '#3b82f6'",
-] as $sql) { try { $pdo->exec($sql); } catch (Exception $e) {} }
+    <!-- Sección de Cierre -->
+    <section class="py-12 bg-green-600">
+        <div class="max-w-4xl mx-auto text-center px-4">
+            <h2 class="text-2xl md:text-3xl font-extrabold text-white mb-6">Tu transformación comienza hoy</h2>
+            <button class="px-10 py-4 bg-white text-green-700 font-extrabold rounded-xl shadow-2xl uppercase text-xs tracking-widest">
+                Sí, quiero empezar ahora
+            </button>
+        </div>
+    </section>
 
-// ==============================
-//   ACCION: ACTUALIZAR DATOS (Título, Desc, Color)
-// ==============================
-if (isset($_GET['action']) && $_GET['action'] === 'update') {
-    $id    = (int)($_GET['id'] ?? 0);
-    $title = trim($_GET['title'] ?? '');
-    $desc  = trim($_GET['description'] ?? '');
-    $color = trim($_GET['color'] ?? '');
-    
-    if ($id > 0 && $title) {
-        $pdo->prepare("UPDATE landings SET title = ?, description = ?, color = ? WHERE id = ? AND user_id = ?")
-            ->execute([$title, $desc, $color, $id, $user_id]);
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['error' => 'Datos incompletos']);
-    }
-    exit;
-}
-
-// ==============================
-//   ACCION: ACTUALIZAR COLOR (Mantener por retrocompatibilidad o quitar si ya se usa update)
-// ==============================
-if (isset($_GET['action']) && $_GET['action'] === 'update_color') {
-    $id = (int)($_GET['id'] ?? 0);
-    $color = trim($_GET['color'] ?? '');
-    if ($id > 0 && $color) {
-        $pdo->prepare("UPDATE landings SET color = ? WHERE id = ? AND user_id = ?")->execute([$color, $id, $user_id]);
-        echo json_encode(['success' => true]);
-    }
-    exit;
-}
-
-// ==============================
-//   BORRAR  GET ?action=delete&id=X
-// ==============================
-if (isset($_GET['action']) && $_GET['action'] === 'delete') {
-    $id = (int)($_GET['id'] ?? 0);
-    if ($id > 0) {
-        $stmt = $pdo->prepare("SELECT filename FROM landings WHERE id = ? AND user_id = ?");
-        $stmt->execute([$id, $user_id]);
-        $fn = $stmt->fetchColumn();
-        if ($fn) {
-            $filepath = $UPLOAD_DIR . $fn;
-            if (file_exists($filepath)) @unlink($filepath);
-        }
-        $pdo->prepare("DELETE FROM landings WHERE id = ? AND user_id = ?")->execute([$id, $user_id]);
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['error' => 'ID inválido']);
-    }
-    exit;
-}
-
-// ==============================
-//   LISTAR  GET
-// ==============================
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    try {
-        // Crear tabla de suscripciones si no existe
-        $pdo->exec("CREATE TABLE IF NOT EXISTS landing_subscriptions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            landing_id INT NOT NULL,
-            user_id INT NOT NULL,
-            token VARCHAR(32) UNIQUE NOT NULL,
-            views INT DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_lu (landing_id, user_id)
-        )");
-
-        // Migración para redirecciones
-        foreach ([
-            "ALTER TABLE landing_subscriptions ADD COLUMN redirect_type ENUM('default', 'url', 'whatsapp') DEFAULT 'default'",
-            "ALTER TABLE landing_subscriptions ADD COLUMN redirect_url VARCHAR(255) NULL",
-            "ALTER TABLE landing_subscriptions ADD COLUMN whatsapp_number VARCHAR(50) NULL",
-            "ALTER TABLE landing_subscriptions ADD COLUMN whatsapp_message TEXT NULL",
-        ] as $sql) { try { $pdo->exec($sql); } catch (Exception $e) {} }
-
-        $user_role = $_SESSION['user_role'] ?? 'subscriber';
-
-        if ($user_role === 'admin') {
-            // ADMIN: ve TODAS las landings con stats globales
-            // Auto-sync carpeta
-            $files = @scandir($UPLOAD_DIR);
-            if ($files) {
-                foreach ($files as $file) {
-                    if ($file === '.' || $file === '..') continue;
-                    if (strtolower(pathinfo($file, PATHINFO_EXTENSION)) !== 'html') continue;
-                    $chk = $pdo->prepare("SELECT COUNT(*) FROM landings WHERE filename = ?");
-                    $chk->execute([$file]);
-                    if ((int)$chk->fetchColumn() === 0) {
-                        $name = preg_replace('/^\d+_?/', '', pathinfo($file, PATHINFO_FILENAME));
-                        $name = str_replace(['_','-'], ' ', $name);
-                        $pdo->prepare("INSERT IGNORE INTO landings (user_id, title, description, filename) VALUES (?, ?, 'Importado automáticamente', ?)")
-                            ->execute([$user_id, ucwords($name), $file]);
-                    }
-                }
-            }
-
-            $stmt = $pdo->query("SELECT * FROM landings ORDER BY id DESC");
-            $landings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($landings as &$l) {
-                // Obtener slug del admin (propietario de la landing)
-                $adminStmt = $pdo->prepare("SELECT slug, name FROM users WHERE id = ?");
-                $adminStmt->execute([$l['user_id']]);
-                $adminRow = $adminStmt->fetch(PDO::FETCH_ASSOC);
-                $adminSlug = ($adminRow && $adminRow['slug']) ? $adminRow['slug'] : 'usuario-' . $l['user_id'];
-                $adminName = $adminRow ? $adminRow['name'] : 'Admin';
-
-                // URL pública: siempre vía landings_gen.php (nunca el archivo estático directo,
-                // que puede no existir en el servidor si no fue sincronizado con el deploy)
-                $ownerUrl = CRM_URL . '/landings_gen/' . urlencode($adminSlug) . '?lp=' . $l['id'];
-                $l['url']         = $ownerUrl;
-                $l['url_display'] = str_replace(['http://', 'https://'], '', $ownerUrl);
-                $l['can_delete']  = true;
-                $l['is_admin']    = true;
-
-                // Stats globales (todos los suscriptores sumados)
-                $sv = $pdo->prepare("SELECT COALESCE(SUM(views),0) FROM landing_subscriptions WHERE landing_id = ?");
-                $sv->execute([$l['id']]);
-                $l['views'] = (int)$sv->fetchColumn();
-
-                $sp = $pdo->prepare("SELECT COUNT(*) FROM prospects WHERE landing_id = ?");
-                $sp->execute([$l['id']]);
-                $l['prospect_count'] = (int)$sp->fetchColumn();
-
-                $v = $l['views'];
-                $p = $l['prospect_count'];
-                $l['conversion_rate'] = ($v > 0) ? round(($p / $v) * 100, 1) : 0;
-
-                // Número de suscriptores activos
-                $sc = $pdo->prepare("SELECT COUNT(*) FROM landing_subscriptions WHERE landing_id = ?");
-                $sc->execute([$l['id']]);
-                $l['subscriber_count'] = (int)$sc->fetchColumn();
-
-                // URLs de cada suscriptor para esta landing
-                $subStmt = $pdo->prepare("
-                    SELECT u.name, u.slug, u.id AS uid
-                    FROM landing_subscriptions ls
-                    JOIN users u ON ls.user_id = u.id
-                    WHERE ls.landing_id = ?
-                ");
-                $subStmt->execute([$l['id']]);
-                $subs = [];
-                while ($s = $subStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $slug = $s['slug'] ?: 'usuario-' . $s['uid'];
-                    $subUrl = CRM_URL . '/landings_gen/' . urlencode($slug) . '?lp=' . $l['id'];
-                    $subs[] = [
-                        'name'        => $s['name'],
-                        'slug'        => $slug,
-                        'url'         => $subUrl,
-                        'url_display' => str_replace(['http://', 'https://'], '', $subUrl),
-                    ];
-                }
-                // Si no hay suscriptores, mostrar la URL del admin como preview
-                if (empty($subs)) {
-                    $subs[] = [
-                        'name'        => $adminName . ' (tú)',
-                        'slug'        => $adminSlug,
-                        'url'         => $ownerUrl,
-                        'url_display' => $l['url_display'],
-                    ];
-                }
-                $l['subscriber_urls'] = $subs;
-            }
-        } else {
-            // SUSCRIPTOR: ve SOLO las landings que el admin le asignó explícitamente
-            $stmt = $pdo->prepare("
-                SELECT l.*, ls.token, ls.views AS sub_views, ls.id AS sub_id
-                FROM landings l
-                INNER JOIN landing_subscriptions ls ON l.id = ls.landing_id AND ls.user_id = ?
-                ORDER BY l.id DESC
-            ");
-            $stmt->execute([$user_id]);
-            $landings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Obtener slug del suscriptor para la URL pública
-            $stmtSlug = $pdo->prepare("SELECT slug FROM users WHERE id = ?");
-            $stmtSlug->execute([$user_id]);
-            $userSlug = $stmtSlug->fetchColumn() ?: 'usuario-' . $user_id;
-
-            foreach ($landings as &$l) {
-                $l['can_delete'] = false;
-                $l['is_admin']   = false;
-
-                // URL pública del suscriptor: landings_gen/{slug}?lp={landing_id}
-                $l['url']         = CRM_URL . '/landings_gen/' . urlencode($userSlug) . '?lp=' . $l['id'];
-                $l['url_display'] = str_replace(['http://', 'https://'], '', CRM_URL) . '/landings_gen/' . urlencode($userSlug) . '?lp=' . $l['id'];
-
-                // Stats PERSONALES del suscriptor (desde landing_subscriptions)
-                $l['views'] = (int)($l['sub_views'] ?? 0);
-
-                $sp = $pdo->prepare("SELECT COUNT(*) FROM prospects WHERE landing_id = ? AND user_id = ?");
-                $sp->execute([$l['id'], $user_id]);
-                $l['prospect_count'] = (int)$sp->fetchColumn();
-
-                $v = $l['views'];
-                $p = $l['prospect_count'];
-                $l['conversion_rate'] = ($v > 0) ? round(($p / $v) * 100, 1) : 0;
-            }
-        }
-
-        echo json_encode($landings);
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-    exit;
-}
-
-// ==============================
-//   SUBIR  POST multipart
-// ==============================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
-    // Solo admins pueden subir landings
-    if (($_SESSION['user_role'] ?? 'subscriber') !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'No tenés permisos para subir landings']);
-        exit;
-    }
-    $title = trim($_POST['title'] ?? '');
-    $desc  = trim($_POST['description'] ?? '');
-    $color = trim($_POST['color'] ?? '#3b82f6');
-    $file  = $_FILES['landing_file'];
-
-    if (empty($title)) { echo json_encode(['error' => 'El título es obligatorio']); exit; }
-    if ($file['error'] !== UPLOAD_ERR_OK) { echo json_encode(['error' => 'Error en la subida: código ' . $file['error']]); exit; }
-
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if ($ext !== 'html') { echo json_encode(['error' => 'Solo se aceptan archivos .html']); exit; }
-
-    $fn   = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', basename($file['name']));
-    $path = $UPLOAD_DIR . $fn;
-
-    if (!move_uploaded_file($file['tmp_name'], $path)) {
-        echo json_encode(['error' => 'No se pudo guardar el archivo en: ' . $UPLOAD_DIR]);
-        exit;
-    }
-
-    $stmt = $pdo->prepare("INSERT INTO landings (user_id, title, description, filename, color) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$user_id, $title, $desc, $fn, $color]);
-    $landing_id = (int)$pdo->lastInsertId();
-
-    // Inyectar modal de registro + tracker en el HTML
-    $html = file_get_contents($path);
-    if ($html !== false) {
-        $crmUrl = CRM_URL;
-        $inject = <<<HTML
+    <footer class="py-6 bg-gray-50 border-t border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-400 text-[10px] uppercase tracking-widest font-semibold">
+                &copy; 2024 VitalCoach - Distribuidor Independiente
+            </p>
+        </div>
+    </footer>
 
 <!-- ===== CRM ULTRA INJECTED ===== -->
 <style>
@@ -357,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
 
 <script>
 (function(){
-  var LID = $landing_id;
+  var LID = 13;
   var base = window.location.origin + window.location.pathname.split('/landings_gen/')[0].split('/l.php')[0];
   var API = base + '/api/prospects.php';
   var STATS = base + '/api/landings_stats.php';
@@ -550,16 +404,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
 })();
 </script>
 <!-- ===== /CRM ULTRA ===== -->
-HTML;
-        $html_out = (stripos($html, '</body>') !== false)
-            ? str_ireplace('</body>', $inject . "\n</body>", $html)
-            : $html . $inject;
-        file_put_contents($path, $html_out);
-    }
-
-    echo json_encode(['success' => true, 'id' => $landing_id]);
-    exit;
-}
-
-echo json_encode(['error' => 'Método no permitido']);
-?>
+</body>
+</html>
