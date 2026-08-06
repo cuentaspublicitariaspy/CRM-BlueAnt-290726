@@ -38,15 +38,16 @@ if ($method === 'POST') {
     $price = ($data['price'] ?? '') !== '' ? (float)$data['price'] : null;
     $currency = trim($data['currency'] ?? '') ?: 'PYG';
     $active = isset($data['active']) ? (int)!!$data['active'] : 1;
+    $isVirtual = isset($data['is_virtual']) ? (int)!!$data['is_virtual'] : 0;
 
     if (!empty($data['id'])) {
-        $pdo->prepare("UPDATE agenda_services SET name=?, duration_min=?, price=?, currency=?, active=? WHERE id=? AND user_id=?")
-            ->execute([$name, $duration, $price, $currency, $active, (int)$data['id'], $ownerUserId]);
+        $pdo->prepare("UPDATE agenda_services SET name=?, duration_min=?, price=?, currency=?, active=?, is_virtual=? WHERE id=? AND user_id=?")
+            ->execute([$name, $duration, $price, $currency, $active, $isVirtual, (int)$data['id'], $ownerUserId]);
         respond(['success' => true]);
     }
 
-    $stmt = $pdo->prepare("INSERT INTO agenda_services (user_id, name, duration_min, price, currency, active) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$ownerUserId, $name, $duration, $price, $currency, $active]);
+    $stmt = $pdo->prepare("INSERT INTO agenda_services (user_id, name, duration_min, price, currency, active, is_virtual) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$ownerUserId, $name, $duration, $price, $currency, $active, $isVirtual]);
     respond(['success' => true, 'id' => (int)$pdo->lastInsertId()]);
 }
 

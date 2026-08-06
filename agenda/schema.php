@@ -241,3 +241,90 @@ try {
         WHERE r.buffer_before_min = 0 AND r.buffer_after_min = 0 AND (x.bb > 0 OR x.ba > 0)
     ");
 } catch (\Exception $e) {}
+
+// 17. Servicio virtual (videollamada) — si está marcado y hay una cuenta
+// Zoom configurada, cada reserva de este servicio genera automáticamente
+// una reunión (ver agenda/Services/ZoomService.php).
+try { $pdo->exec("ALTER TABLE agenda_services ADD COLUMN is_virtual TINYINT(1) NOT NULL DEFAULT 0 AFTER duration_min"); } catch (\Exception $e) {}
+
+// 18. Datos de la reunión Zoom generada para una reserva puntual.
+// start_url incluye un token de autenticación para arrancar la reunión como
+// host — nunca se expone en los endpoints públicos de reserva, solo en el
+// panel de administración.
+try { $pdo->exec("ALTER TABLE agenda_bookings ADD COLUMN zoom_meeting_id VARCHAR(50) NULL AFTER google_event_id"); } catch (\Exception $e) {}
+try { $pdo->exec("ALTER TABLE agenda_bookings ADD COLUMN zoom_join_url VARCHAR(500) NULL AFTER zoom_meeting_id"); } catch (\Exception $e) {}
+try { $pdo->exec("ALTER TABLE agenda_bookings ADD COLUMN zoom_start_url VARCHAR(500) NULL AFTER zoom_join_url"); } catch (\Exception $e) {}
+
+// 19. Conexión de Google Calendar — una por recurso (cada profesional/sala
+// conecta su propio calendario). refresh_token encriptado con Crypto, igual
+// patrón que las credenciales de Twilio/SMTP.
+$pdo->exec("CREATE TABLE IF NOT EXISTS agenda_google_calendar_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    resource_id INT NOT NULL,
+    user_id INT NOT NULL,
+    calendar_id VARCHAR(255) NOT NULL DEFAULT 'primary',
+    google_email VARCHAR(255) NULL,
+    access_token_encrypted TEXT NULL,
+    refresh_token_encrypted TEXT NOT NULL,
+    token_expires_at DATETIME NULL,
+    connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_agenda_google_calendar_resource (resource_id),
+    FOREIGN KEY (resource_id) REFERENCES agenda_resources(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// 20. Credenciales Zoom (Server-to-Server OAuth), una cuenta por negocio —
+// toda reunión de cualquier recurso/servicio virtual sale de esta cuenta.
+// host_user_id: email o ID del usuario Zoom (normalmente el dueño de la
+// cuenta) bajo el cual se crean las reuniones — una app Server-to-Server
+// es a nivel de cuenta, no tiene noción de "usuario actual" ("me" no es
+// válido acá como sí lo es en apps OAuth de usuario), así que hace falta
+// indicar explícitamente qué usuario Zoom oficia de host.
+$pdo->exec("CREATE TABLE IF NOT EXISTS agenda_zoom_config (
+    user_id INT NOT NULL PRIMARY KEY,
+    account_id VARCHAR(255) NOT NULL,
+    client_id VARCHAR(255) NOT NULL,
+    client_secret_encrypted TEXT NOT NULL,
+    host_user_id VARCHAR(255) NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// 21. Overhaul de reglas de notificación: de "una fila por destinatario,
+// aplicada igual a cualquier evento y cualquier recurso" a granularidad por
+// recurso (resource_id = 0 significa "regla por defecto del negocio, para
+// cualquier recurso sin override propio") + tipo de evento (trigger_type),
+// con plantilla de mensaje editable (subject_template/body_template, con
+// variables {{cliente}} {{servicio}} {{agenda}} {{sucursal}} {{negocio}}
+// {{fecha}} {{link}} {{zoom_link}} {{horas}}). Sin plantilla propia, se usa
+// la plantilla por defecto del sistema (ver NotificationService::defaultTemplate).
+try { $pdo->exec("ALTER TABLE agenda_notification_rules ADD COLUMN resource_id INT NOT NULL DEFAULT 0 AFTER user_id"); } catch (\Exception $e) {}
+try { $pdo->exec("ALTER TABLE agenda_notification_rules ADD COLUMN trigger_type VARCHAR(20) NOT NULL DEFAULT 'confirmed' AFTER resource_id"); } catch (\Exception $e) {}
+try { $pdo->exec("ALTER TABLE agenda_notification_rules ADD COLUMN subject_template VARCHAR(255) NULL AFTER channel"); } catch (\Exception $e) {}
+try { $pdo->exec("ALTER TABLE agenda_notification_rules ADD COLUMN body_template TEXT NULL AFTER subject_template"); } catch (\Exception $e) {}
+
+// La vieja unique key (user_id, recipient_type) no contempla trigger_type
+// todavía — hay que sacarla ANTES del backfill de abajo, o los INSERT de
+// los 3 triggers nuevos chocan contra ella (mismo user_id+recipient_type
+// que la fila 'confirmed' ya existente, aunque el trigger sea distinto).
+try { $pdo->exec("ALTER TABLE agenda_notification_rules DROP INDEX uk_agenda_notification_rules"); } catch (\Exception $e) {}
+
+// Backfill autolimitado: las reglas viejas (de antes de esta migración, sin
+// distinción de evento) se clonan a los otros 3 triggers para no cambiar el
+// comportamiento ya configurado por el negocio — antes una sola regla por
+// destinatario aplicaba a confirmed/rescheduled/cancelled/reminder por
+// igual. Se autolimita chequeando si ya existe algún trigger distinto de
+// 'confirmed' (si existe, esta migración ya corrió antes).
+try {
+    $hasDefaults = (int)$pdo->query("SELECT COUNT(*) FROM agenda_notification_rules WHERE resource_id = 0 AND trigger_type = 'confirmed'")->fetchColumn() > 0;
+    $alreadyExpanded = (int)$pdo->query("SELECT COUNT(*) FROM agenda_notification_rules WHERE trigger_type IN ('rescheduled','cancelled','reminder')")->fetchColumn() > 0;
+    if ($hasDefaults && !$alreadyExpanded) {
+        $rows = $pdo->query("SELECT user_id, recipient_type, channel, enabled FROM agenda_notification_rules WHERE resource_id = 0 AND trigger_type = 'confirmed'")->fetchAll();
+        $ins = $pdo->prepare("INSERT INTO agenda_notification_rules (user_id, resource_id, trigger_type, recipient_type, channel, enabled) VALUES (?, 0, ?, ?, ?, ?)");
+        foreach ($rows as $row) {
+            foreach (['rescheduled', 'cancelled', 'reminder'] as $trigger) {
+                $ins->execute([$row['user_id'], $trigger, $row['recipient_type'], $row['channel'], $row['enabled']]);
+            }
+        }
+    }
+} catch (\Exception $e) {}
+
+try { $pdo->exec("ALTER TABLE agenda_notification_rules ADD UNIQUE KEY uk_agenda_notification_rules_v2 (user_id, resource_id, trigger_type, recipient_type)"); } catch (\Exception $e) {}

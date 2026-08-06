@@ -5,6 +5,7 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/../agenda/Helpers/Auth.php';
 require_once __DIR__ . '/../agenda/Services/AvailabilityService.php';
 require_once __DIR__ . '/../agenda/Services/BookingService.php';
+require_once __DIR__ . '/../agenda/Services/BookingIntegrations.php';
 
 $session = AgendaAuth::requireSession();
 $ownerUserId = AgendaAuth::resolveOwnerUserId($session, $_GET['user_id'] ?? null);
@@ -74,6 +75,7 @@ if ($method === 'POST') {
     if ($action === 'cancel' && !empty($data['id'])) {
         try {
             $booking = $bookingService->cancelByOwner($ownerUserId, (int)$data['id']);
+            $booking = agendaSyncIntegrations($pdo, $booking, 'cancelled');
             respond(['success' => true, 'booking' => $booking]);
         } catch (AgendaBookingException $e) {
             respond(['error' => $e->getMessage()], $e->errorCode === 'not_found' ? 404 : 400);
@@ -97,6 +99,7 @@ if ($method === 'POST') {
 
         try {
             $booking = $bookingService->createManual($ownerUserId, $resourceId, $serviceId, $startsAt, $contact, $contactId, $notes, $externalAgentId);
+            $booking = agendaSyncIntegrations($pdo, $booking, 'confirmed');
             notifyBookingEvent($pdo, $booking, 'confirmed');
             respond(['success' => true, 'booking' => $booking]);
         } catch (AgendaBookingException $e) {

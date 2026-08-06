@@ -5,9 +5,15 @@ require_once __DIR__ . '/SmsService.php';
 /**
  * agenda/Services/NotificationService.php
  * Resuelve hasta 3 destinatarios (owner/client/external_agent) y despacha
- * por el canal configurado en agenda_notification_rules. Todo el envío es
- * best-effort: un fallo de notificación nunca debe revertir ni bloquear la
- * operación de reserva que la disparó — solo se loguea.
+ * por el canal configurado en agenda_notification_rules — ahora con
+ * granularidad por recurso (resource_id = 0 es la regla por defecto del
+ * negocio, para cualquier recurso sin override propio) y por tipo de
+ * evento (trigger_type: confirmed/rescheduled/cancelled/reminder), con
+ * plantilla de asunto/cuerpo editable por variables {{cliente}} {{servicio}}
+ * {{agenda}} {{sucursal}} {{negocio}} {{fecha}} {{link}} {{zoom_link}}
+ * {{horas}}. Todo el envío es best-effort: un fallo de notificación nunca
+ * debe revertir ni bloquear la operación de reserva que la disparó — solo
+ * se loguea.
  *
  * El agente externo solo se notifica si el contacto de la reserva tiene
  * external_agent_id asignado; si no lo tiene, simplemente no hay 3er
@@ -17,21 +23,78 @@ class AgendaNotificationService {
 
     private PDO $pdo;
 
+    /**
+     * Plantillas por defecto (trigger_type -> recipient_type -> [subject, body]).
+     * Se usan cuando la regla no tiene subject_template/body_template propios
+     * (o cuando no existe ninguna regla configurada todavía). Los bloques
+     * {{#var}}...{{/var}} solo se incluyen si esa variable tiene valor —
+     * así {{zoom_link}} no deja una línea colgada en reservas no virtuales.
+     */
+    private const DEFAULT_SUBJECTS = [
+        'confirmed'   => 'Reserva confirmada: {{servicio}} — {{fecha}}',
+        'rescheduled' => 'Reserva reprogramada: {{servicio}} — {{fecha}}',
+        'cancelled'   => 'Reserva cancelada: {{servicio}} — {{fecha}}',
+        'reminder'    => 'Recordatorio de turno: {{servicio}} — {{fecha}}',
+    ];
+
+    private const DEFAULT_BODIES = [
+        'confirmed' => [
+            'owner'           => "Una reserva se confirmó.\nCliente: {{cliente}}\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nFecha y hora: {{fecha}}",
+            'client'          => "Hola {{cliente}},\ntu reserva fue confirmada.\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nFecha y hora: {{fecha}}\n{{#zoom_link}}Unite por Zoom: {{zoom_link}}\n{{/zoom_link}}Para reprogramar o cancelar: {{link}}",
+            'external_agent'  => "Tu referido/a {{cliente}} confirmó una reserva.\nServicio: {{servicio}} — {{fecha}}",
+        ],
+        'rescheduled' => [
+            'owner'           => "Una reserva se reprogramó.\nCliente: {{cliente}}\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nNueva fecha y hora: {{fecha}}",
+            'client'          => "Hola {{cliente}},\ntu reserva fue reprogramada.\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nNueva fecha y hora: {{fecha}}\n{{#zoom_link}}Unite por Zoom: {{zoom_link}}\n{{/zoom_link}}Para reprogramar o cancelar: {{link}}",
+            'external_agent'  => "Tu referido/a {{cliente}} reprogramó su reserva.\nServicio: {{servicio}} — nueva fecha {{fecha}}",
+        ],
+        'cancelled' => [
+            'owner'           => "Una reserva se canceló.\nCliente: {{cliente}}\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nFecha y hora: {{fecha}}",
+            'client'          => "Hola {{cliente}},\ntu reserva fue cancelada.\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nFecha y hora: {{fecha}}",
+            'external_agent'  => "Tu referido/a {{cliente}} canceló su reserva.\nServicio: {{servicio}} — {{fecha}}",
+        ],
+        'reminder' => [
+            'owner'           => "Se recuerda una reserva próxima.\nCliente: {{cliente}}\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nFecha y hora: {{fecha}} (faltan aprox. {{horas}} hs)",
+            'client'          => "Hola {{cliente}},\nte recordamos tu próximo turno.\nServicio: {{servicio}} con {{agenda}} en {{sucursal}}\nFecha y hora: {{fecha}} (faltan aprox. {{horas}} hs)\n{{#zoom_link}}Unite por Zoom: {{zoom_link}}\n{{/zoom_link}}",
+            'external_agent'  => "Se acerca el turno de tu referido/a {{cliente}}.\nServicio: {{servicio}} — {{fecha}}",
+        ],
+    ];
+
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
     }
 
     public function notifyBookingEvent(array $booking, string $eventType, array $meta = []): void {
+        if (!in_array($eventType, ['confirmed', 'rescheduled', 'cancelled', 'reminder'], true)) return;
+
         $context = $this->loadContext((int)$booking['id']);
         $recipients = $this->resolveRecipients($booking);
+        $vars = $this->buildVars($booking, $context, $meta);
 
         foreach ($recipients as $recipientType => $recipient) {
-            $rule = $this->loadRule((int)$booking['user_id'], $recipientType);
+            $rule = $this->resolveRule((int)$booking['user_id'], (int)$booking['resource_id'], $eventType, $recipientType);
             if (!$rule['enabled']) continue;
 
-            [$subject, $body] = $this->buildMessage($eventType, $recipientType, $booking, $context, $meta);
+            $subjectTpl = $rule['subject_template'] ?: self::DEFAULT_SUBJECTS[$eventType];
+            $bodyTpl = $rule['body_template'] ?: self::DEFAULT_BODIES[$eventType][$recipientType];
+            $subject = $this->renderTemplate($subjectTpl, $vars);
+            $body = $this->renderTemplate($bodyTpl, $vars);
+
             $this->dispatch($booking, $recipientType, $rule['channel'], $recipient, $subject, $body);
         }
+    }
+
+    /**
+     * Devuelve la plantilla efectiva (propia si existe, sino la de sistema)
+     * para mostrar en el panel de configuración — así el admin ve el texto
+     * real que se va a enviar, no un placeholder vacío, y puede editarlo a
+     * partir de ahí.
+     */
+    public static function effectiveTemplate(?string $subjectTemplate, ?string $bodyTemplate, string $triggerType, string $recipientType): array {
+        return [
+            'subject' => $subjectTemplate ?: (self::DEFAULT_SUBJECTS[$triggerType] ?? ''),
+            'body' => $bodyTemplate ?: (self::DEFAULT_BODIES[$triggerType][$recipientType] ?? ''),
+        ];
     }
 
     private function loadContext(int $bookingId): array {
@@ -82,59 +145,69 @@ class AgendaNotificationService {
         return $recipients;
     }
 
-    private function loadRule(int $userId, string $recipientType): array {
-        $stmt = $this->pdo->prepare("SELECT channel, enabled FROM agenda_notification_rules WHERE user_id = ? AND recipient_type = ?");
-        $stmt->execute([$userId, $recipientType]);
+    /**
+     * Regla efectiva para (negocio, recurso, evento, destinatario): prioriza
+     * la regla propia del recurso sobre la regla por defecto (resource_id =
+     * 0). Si no hay ninguna configurada todavía, cae al valor de sistema
+     * (email, habilitado) — mismo comportamiento que antes de esta migración.
+     */
+    private function resolveRule(int $userId, int $resourceId, string $triggerType, string $recipientType): array {
+        $stmt = $this->pdo->prepare("
+            SELECT channel, enabled, subject_template, body_template
+            FROM agenda_notification_rules
+            WHERE user_id = ? AND resource_id IN (?, 0) AND trigger_type = ? AND recipient_type = ?
+            ORDER BY (resource_id != 0) DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$userId, $resourceId, $triggerType, $recipientType]);
         $row = $stmt->fetch();
-        if ($row) return ['channel' => $row['channel'], 'enabled' => (bool)$row['enabled']];
-        return ['channel' => 'email', 'enabled' => true];
+        if ($row) {
+            return [
+                'channel' => $row['channel'],
+                'enabled' => (bool)$row['enabled'],
+                'subject_template' => $row['subject_template'] ?: null,
+                'body_template' => $row['body_template'] ?: null,
+            ];
+        }
+        return ['channel' => 'email', 'enabled' => true, 'subject_template' => null, 'body_template' => null];
     }
 
-    private function buildMessage(string $eventType, string $recipientType, array $booking, array $context, array $meta): array {
+    private function buildVars(array $booking, array $context, array $meta): array {
         $when = date('d/m/Y H:i', strtotime($booking['starts_at']));
-        $service = $context['service_name'] ?? 'el servicio';
-        $resource = $context['resource_name'] ?? '';
-        $branch = $context['branch_name'] ?? '';
-        $who = $booking['contact_name'] ?: 'Cliente';
+        $manageUrl = defined('CRM_URL') ? rtrim(CRM_URL, '/') . '/reservar-gestionar.php?token=' . $booking['manage_token'] : '';
 
-        $labels = [
-            'confirmed' => 'Reserva confirmada',
-            'rescheduled' => 'Reserva reprogramada',
-            'cancelled' => 'Reserva cancelada',
-            'reminder' => 'Recordatorio de turno',
+        $ownerStmt = $this->pdo->prepare("SELECT name FROM users WHERE id = ?");
+        $ownerStmt->execute([$booking['user_id']]);
+        $negocio = $ownerStmt->fetchColumn() ?: '';
+
+        return [
+            'cliente' => $booking['contact_name'] ?: 'Cliente',
+            'servicio' => $context['service_name'] ?? 'el servicio',
+            'agenda' => $context['resource_name'] ?? '',
+            'sucursal' => $context['branch_name'] ?? '',
+            'negocio' => $negocio,
+            'fecha' => $when,
+            'link' => $manageUrl,
+            'zoom_link' => $booking['zoom_join_url'] ?? '',
+            'horas' => $meta['hours_before'] ?? '',
         ];
-        $subject = ($labels[$eventType] ?? 'Actualización de reserva') . ': ' . $service . ' — ' . $when;
+    }
 
-        $lines = [];
-        if ($recipientType === 'owner') {
-            $verb = match ($eventType) {
-                'confirmed' => 'se confirmó',
-                'rescheduled' => 'se reprogramó',
-                'cancelled' => 'se canceló',
-                'reminder' => 'se recuerda',
-                default => 'tuvo una novedad',
-            };
-            $lines[] = "Una reserva $verb.";
-            $lines[] = "Cliente: $who" . (!empty($booking['contact_phone']) ? " ({$booking['contact_phone']})" : '');
-        } elseif ($recipientType === 'external_agent') {
-            $lines[] = "Tu referido/a $who tiene una novedad en su reserva.";
-        } else {
-            $lines[] = "Hola $who,";
-            $lines[] = match ($eventType) {
-                'confirmed' => 'tu reserva fue confirmada.',
-                'rescheduled' => 'tu reserva fue reprogramada.',
-                'cancelled' => 'tu reserva fue cancelada.',
-                'reminder' => 'te recordamos tu próximo turno.',
-                default => 'hay una novedad sobre tu reserva.',
-            };
-        }
-        $lines[] = 'Servicio: ' . $service . ($resource ? " con $resource" : '') . ($branch ? " en $branch" : '');
-        $lines[] = "Fecha y hora: $when";
-        if ($eventType === 'reminder' && !empty($meta['hours_before'])) {
-            $lines[] = "(faltan aproximadamente {$meta['hours_before']} hs)";
-        }
+    /**
+     * Sustitución de variables {{var}} y bloques condicionales
+     * {{#var}}...{{/var}} (el bloque solo queda si esa variable tiene un
+     * valor no vacío) — permite que la plantilla por defecto incluya la
+     * línea de Zoom solo cuando la reserva efectivamente tiene una.
+     */
+    private function renderTemplate(string $tpl, array $vars): string {
+        $tpl = preg_replace_callback('/\{\{#(\w+)\}\}(.*?)\{\{\/\1\}\}/s', function ($m) use ($vars) {
+            return !empty($vars[$m[1]]) ? $m[2] : '';
+        }, $tpl);
 
-        return [$subject, implode("\n", $lines)];
+        foreach ($vars as $key => $value) {
+            $tpl = str_replace('{{' . $key . '}}', (string)$value, $tpl);
+        }
+        return trim(preg_replace("/\n{3,}/", "\n\n", $tpl));
     }
 
     private function dispatch(array $booking, string $recipientType, string $channel, array $recipient, string $subject, string $body): void {

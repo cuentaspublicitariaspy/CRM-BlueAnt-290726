@@ -93,6 +93,10 @@ function renderDetail() {
             <div class="text-xs font-black uppercase tracking-widest text-slate-400">Fecha y hora</div>
             <div class="font-bold text-slate-900">${formatDate(booking.starts_at.slice(0,10))} · ${booking.starts_at.slice(11,16)}</div>
         </div>
+        ${active && booking.zoom_join_url ? `
+        <a href="${escapeHtml(booking.zoom_join_url)}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 mb-6 no-underline">
+            <i data-lucide="video" class="w-4 h-4"></i>Unirme por Zoom
+        </a>` : ''}
         ${active ? `
         <div class="flex items-center gap-2 mb-6">
             <input type="checkbox" id="attendChk" ${parseInt(booking.attendance_confirmed) ? 'checked disabled' : ''} class="w-5 h-5 rounded accent-blue-600">

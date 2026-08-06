@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/../agenda/Services/AvailabilityService.php';
 require_once __DIR__ . '/../agenda/Services/BookingService.php';
+require_once __DIR__ . '/../agenda/Services/BookingIntegrations.php';
 
 function respond($data, $code = 200) { http_response_code($code); echo json_encode($data); exit; }
 
@@ -189,6 +190,7 @@ if ($action === 'confirm' && $method === 'POST') {
             'phone' => $data['phone'] ?? '',
             'email' => $data['email'] ?? '',
         ]);
+        $booking = agendaSyncIntegrations($pdo, $booking, 'confirmed');
         notifyBookingEvent($pdo, $booking, 'confirmed');
         respond(['success' => true, 'booking' => $booking]);
     } catch (AgendaBookingException $e) {
@@ -239,6 +241,7 @@ if ($action === 'reschedule' && $method === 'POST') {
     $bookingService = new BookingService($pdo, $availability);
     try {
         $booking = $bookingService->rescheduleByManageToken($manageToken, $startsAt);
+        $booking = agendaSyncIntegrations($pdo, $booking, 'rescheduled');
         notifyBookingEvent($pdo, $booking, 'rescheduled');
         respond(['success' => true, 'booking' => $booking]);
     } catch (AgendaBookingException $e) {
@@ -255,6 +258,7 @@ if ($action === 'cancel' && $method === 'POST') {
     $bookingService = new BookingService($pdo, $availability);
     try {
         $booking = $bookingService->cancelByManageToken($manageToken, $data['reason'] ?? null, 'client');
+        $booking = agendaSyncIntegrations($pdo, $booking, 'cancelled');
         notifyBookingEvent($pdo, $booking, 'cancelled');
         respond(['success' => true, 'booking' => $booking]);
     } catch (AgendaBookingException $e) {

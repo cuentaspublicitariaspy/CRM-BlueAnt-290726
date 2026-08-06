@@ -414,6 +414,10 @@ function renderDoneStep() {
                 ${avatarHtml}
                 <span class="font-bold text-sm text-slate-700">${escapeHtml((res && res.name) || '')}</span>
             </div>
+            ${state.booking.zoom_join_url ? `
+            <a href="${escapeHtml(state.booking.zoom_join_url)}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 mb-6 no-underline">
+                <i data-lucide="video" class="w-4 h-4"></i>Unirme por Zoom
+            </a>` : ''}
             <div class="border-t border-slate-100 pt-5 text-left">
                 <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Guardá este enlace para reprogramar o cancelar</div>
                 <a href="${manageUrl}" class="text-blue-600 text-sm font-bold break-all">${manageUrl}</a>

@@ -228,16 +228,46 @@ $is_admin = ($_SESSION['user_role'] ?? 'subscriber') === 'admin';
             <div id="cfg-notifications" class="cfg-panel hidden space-y-6">
                 <div class="card p-4 flex items-center gap-3 bg-blue-50/50 border-blue-100">
                     <i data-lucide="info" class="w-4 h-4 text-blue-500 shrink-0"></i>
-                    <p class="text-xs text-slate-600">Las credenciales de envío (SMTP y SMS/Twilio) se cargan desde <a href="configuracion.php" class="text-blue-600 font-bold underline">Configuración → Notificaciones de Agenda</a>. Acá solo definís a quién avisar y por qué canal.</p>
+                    <p class="text-xs text-slate-600">Las credenciales de envío (SMTP y SMS/Twilio) se cargan desde <a href="configuracion.php" class="text-blue-600 font-bold underline">Configuración → Notificaciones de Agenda</a>. Acá definís a quién avisar, por qué canal, y con qué texto — todo por recurso y por tipo de evento.</p>
                 </div>
                 <div class="card p-6">
-                    <h3 class="font-black text-slate-900 mb-1">Reglas de notificación</h3>
-                    <p class="text-xs text-slate-400 mb-6">A quién avisar y por qué canal cuando se confirma, reprograma o cancela una reserva. El agente externo solo se notifica si el contacto tiene uno asignado.</p>
-                    <div id="notificationRulesBody" class="space-y-4"></div>
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-1">
+                        <h3 class="font-black text-slate-900">Reglas de notificación</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="field-label mb-0">Recurso</label>
+                            <select id="notifResourceSelect" class="field-input" style="width:auto" onchange="loadNotificationRules()">
+                                <option value="0">Regla por defecto (todos los recursos)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-6">A quién avisar, por qué canal y con qué texto para cada tipo de evento. Un recurso sin reglas propias usa la regla por defecto del negocio. El agente externo solo se notifica si el contacto tiene uno asignado.</p>
+                    <div id="notificationRulesBody" class="space-y-6"></div>
                     <button class="btn-primary mt-6" onclick="saveNotificationRules()">Guardar reglas</button>
                 </div>
             </div>
 
+            <!-- Integraciones -->
+            <div id="cfg-integrations" class="cfg-panel hidden space-y-6">
+                <div class="card p-6">
+                    <h3 class="font-black text-slate-900 mb-1">Zoom</h3>
+                    <p class="text-xs text-slate-400 mb-6">Una sola cuenta Zoom para todo el negocio (Server-to-Server OAuth). Los servicios marcados como "virtuales" generan automáticamente una reunión desde esta cuenta al confirmarse la reserva — el enlace se comparte con el cliente y se guarda en la reserva.</p>
+                    <form id="zoomConfigForm" class="grid md:grid-cols-2 gap-4">
+                        <div><label class="field-label">Account ID</label><input class="field-input" name="account_id" required></div>
+                        <div><label class="field-label">Client ID</label><input class="field-input" name="client_id" required></div>
+                        <div><label class="field-label">Client Secret</label><input class="field-input" type="password" name="client_secret" placeholder="•••••••• (dejar vacío para no cambiar)"></div>
+                        <div><label class="field-label">Usuario host (email de Zoom)</label><input class="field-input" name="host_user_id" placeholder="ej. dueño@negocio.com" required></div>
+                        <div class="md:col-span-2 flex items-center gap-3">
+                            <button type="submit" class="btn-primary">Guardar</button>
+                            <span id="zoomConfigStatus" class="text-xs font-bold text-slate-400"></span>
+                        </div>
+                    </form>
+                    <p class="text-[11px] text-slate-400 mt-4">¿No tenés las credenciales todavía? Pedíselas al administrador — hace falta crear una app "Server-to-Server OAuth" en el Marketplace de Zoom.</p>
+                </div>
+                <div class="card p-6">
+                    <h3 class="font-black text-slate-900 mb-1">Google Calendar</h3>
+                    <p class="text-xs text-slate-400">Se conecta por recurso, no acá — entrá a Sucursales y Recursos → el recurso que quieras sincronizar, vas a ver el botón "Conectar Google Calendar" en su detalle.</p>
+                </div>
+            </div>
 
             <!-- Ajustes generales -->
             <div id="cfg-settings" class="cfg-panel hidden space-y-6">
@@ -466,7 +496,7 @@ function showTab(tab) {
 
 const CFG_TABS = [
     ['branches', 'Sucursales y Recursos'], ['links', 'Enlaces de reserva'],
-    ['notifications', 'Notificaciones'], ['settings', 'Ajustes generales'],
+    ['notifications', 'Notificaciones'], ['integrations', 'Integraciones'], ['settings', 'Ajustes generales'],
 ];
 let currentConfigTab = 'branches';
 document.getElementById('cfgPills').innerHTML = CFG_TABS.map(([id, label]) =>
@@ -474,7 +504,7 @@ document.getElementById('cfgPills').innerHTML = CFG_TABS.map(([id, label]) =>
 
 const CFG_LOADERS = {
     branches: loadDrillDown, links: loadLinks,
-    notifications: loadNotificationRules, settings: loadSettings,
+    notifications: loadNotificationRulesTab, integrations: loadIntegrationsTab, settings: loadSettings,
 };
 function showConfigTab(tab) {
     currentConfigTab = tab;
@@ -661,10 +691,11 @@ async function renderDrillResourceDetail() {
     const r = cache.resources.find(x => x.id == drill.resourceId);
     if (!r) { drillGoBranches(); return; }
 
-    const [schedules, blocks, links] = await Promise.all([
+    const [schedules, blocks, links, googleConn] = await Promise.all([
         api('api/agenda-schedules.php?resource_id=' + r.id),
         api('api/agenda-blocks.php?resource_id=' + r.id),
         api('api/agenda-booking-links.php'),
+        api('api/agenda-google-disconnect.php?resource_id=' + r.id).catch(() => ({ connected: false })),
     ]);
 
     // El enlace dedicado se autogenera recién cuando el recurso ya tiene al
@@ -712,6 +743,17 @@ async function renderDrillResourceDetail() {
                 <div class="flex items-end"><label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input type="checkbox" name="active" ${parseInt(r.active) ? 'checked' : ''} class="w-4 h-4"> Activo</label></div>
                 <div class="md:col-span-3"><button type="submit" class="btn-primary">Guardar datos</button></div>
             </form>
+        </div>
+
+        <div class="card p-6">
+            <h3 class="font-black text-slate-900 mb-1">Google Calendar</h3>
+            <p class="text-xs text-slate-500 mb-4">Cada reserva confirmada de este recurso se crea (y actualiza/borra) como evento en el calendario conectado. Es sincronización de ida — nunca se lee lo que haya en el calendario.</p>
+            ${googleConn.connected ? `
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-2 text-emerald-700 text-sm font-bold"><i data-lucide="check-circle-2" class="w-4 h-4"></i>Conectado${googleConn.google_email ? ` (${escapeHtml(googleConn.google_email)})` : ''}</div>
+                <button class="btn-danger" onclick="disconnectGoogleCalendar(${r.id})">Desconectar</button>
+            </div>` : `
+            <a href="api/agenda-google-connect.php?resource_id=${r.id}" class="btn-primary inline-flex items-center gap-2"><i data-lucide="calendar-plus" class="w-4 h-4"></i>Conectar Google Calendar</a>`}
         </div>
 
         <div class="card p-6">
@@ -770,6 +812,13 @@ async function renderDrillResourceDetail() {
             <div id="rd-services-list" class="flex flex-wrap gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3">
                 ${cache.services.map(s => `<label class="flex items-center gap-1.5 text-xs font-bold text-slate-600"><input type="checkbox" value="${s.id}" class="rd-svc-chk w-4 h-4" ${r.service_ids.includes(s.id) ? 'checked' : ''}> ${escapeHtml(s.name)} (${s.duration_min} min)</label>`).join('') || '<span class="text-xs text-slate-400">Sin servicios todavía</span>'}
             </div>
+            ${cache.services.length ? `
+            <div class="mb-3">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Servicio virtual (genera reunión de Zoom automáticamente)</p>
+                <div class="flex flex-wrap gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    ${cache.services.map(s => `<label class="flex items-center gap-1.5 text-xs font-bold text-slate-600"><input type="checkbox" data-service-id="${s.id}" class="rd-svc-virtual w-4 h-4" ${parseInt(s.is_virtual) ? 'checked' : ''} onchange="rdToggleServiceVirtual(${s.id}, this.checked)"> ${escapeHtml(s.name)}</label>`).join('')}
+                </div>
+            </div>` : ''}
             <button type="button" class="btn-secondary" onclick="document.getElementById('rd-service-quick').classList.toggle('hidden')">+ Nuevo servicio</button>
             <div id="rd-service-quick" class="hidden mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                 <input id="rd-service-quick-name" class="field-input" placeholder='Nombre (ej. "Uso General", "Sesión Estratégica")'>
@@ -777,6 +826,7 @@ async function renderDrillResourceDetail() {
                     <input id="rd-service-quick-duration" type="number" min="5" value="30" class="field-input" placeholder="Duración (min)">
                     <input id="rd-service-quick-price" type="number" step="0.01" class="field-input" placeholder="Precio (opcional)">
                 </div>
+                <label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input type="checkbox" id="rd-service-quick-virtual" class="w-4 h-4"> Servicio virtual (genera reunión de Zoom)</label>
                 <div class="flex gap-2">
                     <button type="button" class="btn-primary flex-1" onclick="rdQuickCreateService()">Crear y asignar</button>
                     <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('rd-service-quick').classList.add('hidden')">Cancelar</button>
@@ -854,16 +904,34 @@ async function rdQuickCreateService() {
     const name = document.getElementById('rd-service-quick-name').value.trim();
     const duration = parseInt(document.getElementById('rd-service-quick-duration').value || '30', 10);
     const price = document.getElementById('rd-service-quick-price').value;
+    const isVirtual = document.getElementById('rd-service-quick-virtual').checked ? 1 : 0;
     if (!name) return showToast('Ponele un nombre al servicio');
     if (!duration || duration <= 0) return showToast('Duración inválida');
     try {
-        const svc = await apiPost('api/agenda-services.php', { name, duration_min: duration, price });
+        const svc = await apiPost('api/agenda-services.php', { name, duration_min: duration, price, is_virtual: isVirtual });
         const currentIds = Array.from(document.querySelectorAll('.rd-svc-chk:checked')).map(c => parseInt(c.value));
         const newIds = [...new Set([...currentIds, svc.id])];
         await apiPost('api/agenda-resources.php', { id: drill.resourceId, service_ids: newIds });
         await refreshCatalog();
         renderDrillResourceDetail();
         showToast('Servicio creado y asignado', 'success');
+    } catch (err) { showToast(err.message); }
+}
+async function rdToggleServiceVirtual(serviceId, isVirtual) {
+    const svc = cache.services.find(s => s.id === serviceId);
+    if (!svc) return;
+    try {
+        await apiPost('api/agenda-services.php', { id: serviceId, name: svc.name, duration_min: svc.duration_min, price: svc.price, currency: svc.currency, active: svc.active, is_virtual: isVirtual ? 1 : 0 });
+        await refreshCatalog();
+        showToast('Servicio actualizado', 'success');
+    } catch (err) { showToast(err.message); renderDrillResourceDetail(); }
+}
+async function disconnectGoogleCalendar(resourceId) {
+    if (!(await showConfirm('¿Desconectar Google Calendar de este recurso? Los eventos ya creados no se van a borrar del calendario, pero dejarán de sincronizarse.'))) return;
+    try {
+        await apiPost('api/agenda-google-disconnect.php', { resource_id: resourceId });
+        renderDrillResourceDetail();
+        showToast('Google Calendar desconectado', 'success');
     } catch (err) { showToast(err.message); }
 }
 async function rdSaveServices() {
@@ -942,33 +1010,107 @@ document.getElementById('externalAgentForm').onsubmit = async (e) => {
     try { await apiPost('api/agenda-external-agents.php', data); resetForm('externalAgentForm'); loadExternalAgents(); showToast('Agente externo guardado', 'success'); } catch (err) { showToast(err.message); }
 };
 
-// ── NOTIFICACIONES ──
-const RECIPIENT_LABELS = { owner: 'Dueño del negocio', client: 'Cliente', external_agent: 'Agente externo (si el contacto tiene uno asignado)' };
+// ── NOTIFICACIONES (por recurso + tipo de evento, con plantilla editable) ──
+const RECIPIENT_LABELS = { owner: 'Dueño del negocio', client: 'Cliente', external_agent: 'Agente externo (si tiene uno asignado)' };
+const TRIGGER_LABELS = { confirmed: 'Al confirmar', rescheduled: 'Al reprogramar', cancelled: 'Al cancelar', reminder: 'Recordatorio' };
+
+async function loadNotificationRulesTab() {
+    await refreshCatalog();
+    const sel = document.getElementById('notifResourceSelect');
+    const current = sel.value || '0';
+    sel.innerHTML = '<option value="0">Regla por defecto (todos los recursos)</option>' +
+        cache.resources.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+    sel.value = current;
+    loadNotificationRules();
+}
+
 async function loadNotificationRules() {
-    const rules = await api('api/agenda-notification-rules.php');
-    document.getElementById('notificationRulesBody').innerHTML = rules.map(r => `
-        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl p-4" data-recipient="${r.recipient_type}">
-            <div>
-                <div class="font-bold text-sm text-slate-800">${RECIPIENT_LABELS[r.recipient_type]}</div>
+    const resourceId = document.getElementById('notifResourceSelect').value || '0';
+    const { rules } = await api('api/agenda-notification-rules.php?resource_id=' + resourceId);
+    const byTrigger = {};
+    rules.forEach(r => { (byTrigger[r.trigger_type] = byTrigger[r.trigger_type] || []).push(r); });
+
+    document.getElementById('notificationRulesBody').innerHTML = Object.keys(TRIGGER_LABELS).map(trigger => `
+        <div class="border border-slate-200 rounded-2xl p-4">
+            <h4 class="font-black text-sm text-slate-800 mb-3">${TRIGGER_LABELS[trigger]}</h4>
+            <div class="space-y-3">
+                ${(byTrigger[trigger] || []).map(r => `
+                    <details class="bg-slate-50 border border-slate-200 rounded-xl p-3" data-trigger="${r.trigger_type}" data-recipient="${r.recipient_type}">
+                        <summary class="flex items-center justify-between gap-4 cursor-pointer list-none flex-wrap">
+                            <span class="font-bold text-xs text-slate-700">${RECIPIENT_LABELS[r.recipient_type]}${r.has_override ? ' <span class="text-[9px] font-black uppercase tracking-widest text-blue-500">· Personalizado</span>' : ''}</span>
+                            <span class="flex items-center gap-3 shrink-0" onclick="event.stopPropagation()">
+                                <select class="field-input rule-channel" style="width:auto">
+                                    <option value="email" ${r.channel === 'email' ? 'selected' : ''}>Email</option>
+                                    <option value="sms" ${r.channel === 'sms' ? 'selected' : ''}>SMS</option>
+                                </select>
+                                <label class="flex items-center gap-1.5 text-xs font-bold text-slate-500"><input type="checkbox" class="rule-enabled w-4 h-4" ${parseInt(r.enabled) ? 'checked' : ''}> Habilitado</label>
+                            </span>
+                        </summary>
+                        <div class="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                            <div><label class="field-label">Asunto</label><input class="field-input rule-subject"></div>
+                            <div><label class="field-label">Mensaje</label><textarea class="field-input rule-body" rows="4"></textarea></div>
+                            <p class="text-[10px] text-slate-400">Variables: {{cliente}} {{servicio}} {{agenda}} {{sucursal}} {{negocio}} {{fecha}} {{link}} {{zoom_link}} {{horas}}. Dejar vacío y guardar para volver a usar el texto por defecto.</p>
+                        </div>
+                    </details>
+                `).join('')}
             </div>
-            <div class="flex items-center gap-4">
-                <select class="field-input rule-channel" style="width:auto">
-                    <option value="email" ${r.channel === 'email' ? 'selected' : ''}>Email</option>
-                    <option value="sms" ${r.channel === 'sms' ? 'selected' : ''}>SMS</option>
-                </select>
-                <label class="flex items-center gap-2 text-xs font-bold text-slate-500"><input type="checkbox" class="rule-enabled w-4 h-4" ${parseInt(r.enabled) ? 'checked' : ''}> Habilitado</label>
-            </div>
-        </div>`).join('');
+        </div>
+    `).join('');
+
+    // Se llenan por JS (no interpolados en el template de arriba) para evitar
+    // problemas de escapado de comillas/saltos de línea dentro de atributos HTML.
+    document.querySelectorAll('#notificationRulesBody details').forEach(el => {
+        const r = rules.find(x => x.trigger_type === el.dataset.trigger && x.recipient_type === el.dataset.recipient);
+        if (!r) return;
+        el.querySelector('.rule-subject').value = r.subject_template || r.default_subject;
+        el.querySelector('.rule-body').value = r.body_template || r.default_body;
+    });
+    icons();
 }
+
 async function saveNotificationRules() {
-    const rows = document.querySelectorAll('#notificationRulesBody > div');
-    const rules = Array.from(rows).map(row => ({
-        recipient_type: row.dataset.recipient,
-        channel: row.querySelector('.rule-channel').value,
-        enabled: row.querySelector('.rule-enabled').checked ? 1 : 0,
+    const resourceId = document.getElementById('notifResourceSelect').value || '0';
+    const items = document.querySelectorAll('#notificationRulesBody details');
+    const rules = Array.from(items).map(el => ({
+        trigger_type: el.dataset.trigger,
+        recipient_type: el.dataset.recipient,
+        channel: el.querySelector('.rule-channel').value,
+        enabled: el.querySelector('.rule-enabled').checked ? 1 : 0,
+        subject_template: el.querySelector('.rule-subject').value,
+        body_template: el.querySelector('.rule-body').value,
     }));
-    try { await apiPost('api/agenda-notification-rules.php', { rules }); showToast('Reglas guardadas', 'success'); } catch (err) { showToast(err.message); }
+    try {
+        await apiPost('api/agenda-notification-rules.php', { resource_id: resourceId, rules });
+        showToast('Reglas guardadas', 'success');
+        loadNotificationRules();
+    } catch (err) { showToast(err.message); }
 }
+
+// ── INTEGRACIONES (Zoom del negocio) ──
+async function loadIntegrationsTab() {
+    try {
+        const cfg = await api('api/agenda-zoom-config.php');
+        const f = document.getElementById('zoomConfigForm');
+        f.account_id.value = cfg.account_id || '';
+        f.client_id.value = cfg.client_id || '';
+        f.host_user_id.value = cfg.host_user_id || '';
+        document.getElementById('zoomConfigStatus').textContent = cfg.configured ? 'Configurado' : 'Sin configurar';
+        document.getElementById('zoomConfigStatus').className = 'text-xs font-bold ' + (cfg.configured ? 'text-emerald-600' : 'text-slate-400');
+    } catch (err) { showToast(err.message); }
+}
+document.getElementById('zoomConfigForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    try {
+        await apiPost('api/agenda-zoom-config.php', {
+            account_id: f.account_id.value, client_id: f.client_id.value,
+            client_secret: f.client_secret.value, host_user_id: f.host_user_id.value,
+        });
+        f.client_secret.value = '';
+        showToast('Zoom configurado', 'success');
+        loadIntegrationsTab();
+    } catch (err) { showToast(err.message); }
+};
 
 
 // ── AJUSTES GENERALES ──
@@ -1146,7 +1288,9 @@ async function loadBookings() {
             <td>${escapeHtml(b.resource_name)}</td>
             <td>${escapeHtml(b.service_name)}</td>
             <td>${escapeHtml(b.contact_name || '—')}${b.contact_phone ? '<br><span class="text-slate-400 text-[11px]">' + escapeHtml(b.contact_phone) + '</span>' : ''}</td>
-            <td><span class="text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_BADGE[b.status] || ''}">${b.status}</span></td>
+            <td><span class="text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_BADGE[b.status] || ''}">${b.status}</span>
+                ${b.zoom_join_url ? `<a href="${b.zoom_join_url}" target="_blank" title="Unirse por Zoom" class="text-blue-500 ml-1"><i data-lucide="video" class="w-3.5 h-3.5 inline"></i></a>` : ''}
+                ${b.google_event_id ? `<i data-lucide="calendar-check-2" class="w-3.5 h-3.5 inline text-emerald-500 ml-1" title="Sincronizado con Google Calendar"></i>` : ''}</td>
             <td>${parseInt(b.attendance_confirmed) ? '<i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>' : '—'}</td>
             <td class="text-right">${['confirmed','rescheduled','held'].includes(b.status) ? `<button class="btn-danger" onclick="cancelBooking(${b.id})">Cancelar</button>` : ''}</td>
         </tr>`).join('') || '<tr><td colspan="7" class="text-center py-10 text-slate-400">Sin reservas con estos filtros</td></tr>';
@@ -1261,6 +1405,24 @@ async function submitManualBooking() {
 // Init
 showConfigTab('branches');
 loadResumen();
+
+// Vuelta del callback de Google Calendar OAuth (redirect de página completa,
+// no fetch) — agenda-google-callback.php manda de vuelta acá con estos
+// query params para mostrar el resultado y reabrir el recurso conectado.
+(function handleGoogleCallbackRedirect() {
+    const params = new URLSearchParams(location.search);
+    const google = params.get('google');
+    if (!google) return;
+    const resourceId = parseInt(params.get('resource_id') || '0', 10);
+    if (google === 'connected') showToast('Google Calendar conectado', 'success');
+    else showToast(params.get('msg') || 'No se pudo conectar Google Calendar');
+    history.replaceState({}, '', location.pathname);
+    if (resourceId) {
+        showTab('config');
+        showConfigTab('branches');
+        setTimeout(() => drillGoResourceDetail(resourceId), 300);
+    }
+})();
 </script>
 </body>
 </html>
