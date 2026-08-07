@@ -240,6 +240,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
+/**
+ * Analiza los <form> del HTML original (antes de inyectar nada) con la
+ * MISMA heurística que corre en el navegador (ver $formBridgeJs más abajo,
+ * función extractLeadFields): busca en name/id/placeholder/type de cada
+ * campo qué probablemente sea nombre/email/whatsapp. Sirve para devolverle
+ * un reporte al admin en el momento de subir la landing, así sabe si el
+ * mapeo automático va a funcionar o si el formulario usa nombres de campo
+ * que no se pueden reconocer (y en ese caso ajustarlo antes de publicar).
+ *
+ * Las listas de keywords deben mantenerse iguales a las de $formBridgeJs.
+ */
+function analyzeLandingForms(string $html): array {
+    $emailKeywords = ['email', 'correo', 'mail'];
+    $phoneKeywords = ['whatsapp', 'wsp', 'telefono', 'teléfono', 'celular', 'movil', 'móvil', 'phone', 'tel'];
+    $nameKeywords = ['name', 'nombre'];
+
+    $matchesKeyword = function (string $haystack, array $keywords): bool {
+        foreach ($keywords as $kw) {
+            if (mb_stripos($haystack, $kw) !== false) return true;
+        }
+        return false;
+    };
+
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    // Prefijo XML declarando UTF-8: sin esto, DOMDocument asume Latin-1 al
+    // parsear HTML arbitrario que no trae su propio <meta charset>, y las
+    // tildes/ñ de placeholders en español quedan corruptas.
+    $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
+    libxml_clear_errors();
+
+    $forms = $dom->getElementsByTagName('form');
+    $report = [];
+
+    foreach ($forms as $form) {
+        $nameField = null; $emailField = null; $phoneField = null; $firstTextField = null;
+
+        foreach (['input', 'textarea'] as $tag) {
+            foreach ($form->getElementsByTagName($tag) as $input) {
+                $type = strtolower($input->getAttribute('type') ?: 'text');
+                if (in_array($type, ['submit', 'button', 'hidden', 'checkbox', 'radio', 'file'], true)) continue;
+
+                $fieldName = $input->getAttribute('name');
+                $fieldId = $input->getAttribute('id');
+                $placeholder = $input->getAttribute('placeholder');
+                $haystack = $fieldName . ' ' . $fieldId . ' ' . $placeholder;
+                $label = $fieldName ? "{$tag}[name=\"{$fieldName}\"]" : ($fieldId ? "{$tag}#{$fieldId}" : ($placeholder ? "{$tag}[placeholder=\"{$placeholder}\"]" : "{$tag} sin nombre/id"));
+
+                if (!$emailField && ($type === 'email' || $matchesKeyword($haystack, $emailKeywords))) { $emailField = $label; continue; }
+                if (!$phoneField && ($type === 'tel' || $matchesKeyword($haystack, $phoneKeywords))) { $phoneField = $label; continue; }
+                if (!$nameField && $matchesKeyword($haystack, $nameKeywords)) { $nameField = $label; continue; }
+                if (!$firstTextField && $type === 'text') { $firstTextField = $label; }
+            }
+        }
+        if (!$nameField) { $nameField = $firstTextField; }
+
+        $report[] = [
+            'name_found' => $nameField !== null,
+            'name_field' => $nameField,
+            'email_found' => $emailField !== null,
+            'email_field' => $emailField,
+            'whatsapp_found' => $phoneField !== null,
+            'whatsapp_field' => $phoneField,
+        ];
+    }
+
+    return $report;
+}
+
 // ==============================
 //   SUBIR  POST multipart
 // ==============================
@@ -273,6 +342,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
     $stmt->execute([$user_id, $title, $desc, $fn, $color]);
     $landing_id = (int)$pdo->lastInsertId();
 
+    $hasExistingForm = false;
+    $formReport = [];
+
     // Inyectar modal de registro + tracker en el HTML
     $html = file_get_contents($path);
     if ($html !== false) {
@@ -284,6 +356,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
         // se mantiene el comportamiento de siempre (cualquier botón/enlace
         // abre el modal de captura).
         $hasExistingForm = (stripos($html, '<form') !== false);
+        $formReport = $hasExistingForm ? analyzeLandingForms($html) : [];
 
         if ($hasExistingForm) {
             $buttonHijackJs = '';
@@ -636,7 +709,12 @@ HTML;
         file_put_contents($path, $html_out);
     }
 
-    echo json_encode(['success' => true, 'id' => $landing_id]);
+    echo json_encode([
+        'success' => true,
+        'id' => $landing_id,
+        'form_detected' => $hasExistingForm,
+        'form_report' => $formReport,
+    ]);
     exit;
 }
 

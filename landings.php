@@ -694,10 +694,27 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
         const data = await res.json();
 
         if (data.success) {
-            msg.textContent = isEdit ? '✅ Cambios guardados' : '✅ Landing subida e inyectada con éxito';
+            const escapeHtml = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+            let extra = '';
+            let closeDelay = 1500;
+            if (!isEdit && data.form_detected) {
+                const report = data.form_report || [];
+                const parts = report.map((f, i) => {
+                    const label = report.length > 1 ? `Form ${i + 1}: ` : '';
+                    const items = [
+                        f.name_found ? `Nombre ✓ (${escapeHtml(f.name_field)})` : 'Nombre ✗ no encontrado',
+                        f.email_found ? `Email ✓ (${escapeHtml(f.email_field)})` : 'Email ✗ no encontrado',
+                        f.whatsapp_found ? `WhatsApp ✓ (${escapeHtml(f.whatsapp_field)})` : 'WhatsApp ✗ no encontrado',
+                    ];
+                    return escapeHtml(label) + items.join(' · ');
+                });
+                extra = '<br><span style="font-weight:600">Formulario propio detectado:</span><br>' + parts.join('<br>');
+                closeDelay = 5000;
+            }
+            msg.innerHTML = (isEdit ? '✅ Cambios guardados' : '✅ Landing subida e inyectada con éxito') + extra;
             msg.className = 'text-sm text-center py-2 rounded-xl font-medium bg-emerald-50 text-emerald-700';
             msg.classList.remove('hidden');
-            setTimeout(() => { closeUploadModal(); fetchLandings(); }, 1500);
+            setTimeout(() => { closeUploadModal(); fetchLandings(); }, closeDelay);
         } else {
             msg.textContent = '❌ ' + (data.error || 'Error desconocido');
             msg.className = 'text-sm text-center py-2 rounded-xl font-medium bg-red-50 text-red-600';
