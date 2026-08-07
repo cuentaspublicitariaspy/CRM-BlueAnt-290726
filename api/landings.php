@@ -277,6 +277,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
     $html = file_get_contents($path);
     if ($html !== false) {
         $crmUrl = CRM_URL;
+
+        // Si la landing ya trae su propio <form>, ESE es la puerta de entrada
+        // al CRM: no se tocan los botones de la página (nada de abrir el
+        // modal al hacer click en cualquier link/botón). Si NO tiene form,
+        // se mantiene el comportamiento de siempre (cualquier botón/enlace
+        // abre el modal de captura).
+        $hasExistingForm = (stripos($html, '<form') !== false);
+
+        if ($hasExistingForm) {
+            $buttonHijackJs = '';
+            $formBridgeJs = <<<'JS'
+
+  // La landing ya trae su propio formulario: se usa ESE como puerta de
+  // entrada al CRM en vez del modal — no se tocan botones ni el resto de
+  // la página. Heurística sobre name/id/placeholder/type de cada campo
+  // para mapear a name/email/whatsapp (best-effort: un formulario de
+  // terceros no sigue ninguna convención fija de nombres de campo).
+  (function(){
+    function fieldHay(el){ return ((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')).toLowerCase(); }
+    function fieldMatches(el, keywords){
+      var hay = fieldHay(el);
+      for(var i=0;i<keywords.length;i++){ if(hay.indexOf(keywords[i])>-1) return true; }
+      return false;
+    }
+    function extractLeadFields(form){
+      var name='', email='', phone='', firstText='';
+      Array.prototype.forEach.call(form.elements, function(el){
+        var tag = el.tagName;
+        if(tag!=='INPUT'&&tag!=='TEXTAREA') return;
+        var type = (el.type||'text').toLowerCase();
+        if(type==='submit'||type==='button'||type==='hidden'||type==='checkbox'||type==='radio'||type==='file') return;
+        var val = (el.value||'').trim();
+        if(!val) return;
+        if(!email && (type==='email' || fieldMatches(el, ['email','correo','mail']))){ email = val; return; }
+        if(!phone && (type==='tel' || fieldMatches(el, ['whatsapp','wsp','telefono','teléfono','celular','movil','móvil','phone','tel']))){ phone = val; return; }
+        if(!name && fieldMatches(el, ['name','nombre'])){ name = val; return; }
+        if(!firstText && type==='text') firstText = val;
+      });
+      if(!name) name = firstText;
+      return {name:name, email:email, whatsapp:phone};
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('form'), function(form){
+      form.addEventListener('submit', async function(e){
+        var fields = extractLeadFields(form);
+        if(!fields.name || !fields.email) return; // no se pudo mapear los campos: se deja que el form haga lo suyo
+        e.preventDefault();
+        var token = window.CRM_TOKEN || '';
+        var finalApi = token ? base + '/api/landing_track.php' : API;
+        var payload = token
+          ? {action:'lead', token:token, name:fields.name, email:fields.email, whatsapp:fields.whatsapp}
+          : {name:fields.name, email:fields.email, whatsapp:fields.whatsapp, landing_id:LID};
+        var submitBtn = form.querySelector('[type="submit"],button:not([type])');
+        var originalText = submitBtn ? submitBtn.textContent : '';
+        if(submitBtn){ submitBtn.disabled = true; }
+        try{
+          var r = await fetch(finalApi, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+          var d = await r.json();
+          if(d.id || d.success){
+            if(d.redirect_url){ window.location.href = d.redirect_url; }
+            else { form.innerHTML = '<div style="text-align:center;padding:2rem 1rem;"><h3 style="color:#10b981;font-size:1.2rem;font-weight:900;margin-bottom:.4rem;">✅ ¡Recibido!</h3><p style="color:#64748b;font-family:inherit;margin:0;">Te contactamos muy pronto. ¡Gracias!</p></div>'; }
+          } else {
+            alert('Error: '+(d.error||'Intenta de nuevo'));
+            if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=originalText; }
+          }
+        }catch(err){
+          alert('Error de red. Intenta de nuevo.');
+          if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=originalText; }
+        }
+      });
+    });
+  })();
+JS;
+        } else {
+            $buttonHijackJs = <<<'JS'
+  // Event delegation: botones/enlaces externos abren el modal
+  document.addEventListener('click', function(e){
+    var el = e.target;
+    for(var i=0;i<3;i++){
+      if(!el || el===document.body) break;
+      var id = el.id || '';
+      if(id==='crm-send'||id==='crm-cancel'||id==='crm-fab'||id==='crm-ov'||id==='crm-box'||id==='crm-flag-btn'||id==='crm-num-inp'||id==='crm-country-search'||id==='crm-ok-close') return;
+      if(drop.contains(el)||document.getElementById('crm-phone-wrap').contains(el)) return;
+      if(el.tagName==='BUTTON'||el.tagName==='A'){
+        e.preventDefault();
+        openModal();
+        return;
+      }
+      el = el.parentElement;
+    }
+  });
+JS;
+            $formBridgeJs = '';
+        }
         $inject = <<<HTML
 
 <!-- ===== CRM ULTRA INJECTED ===== -->
@@ -488,22 +581,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
   document.getElementById('crm-cancel').addEventListener('click', closeModal);
   document.getElementById('crm-ov').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
-  // Event delegation: botones/enlaces externos abren el modal
-  document.addEventListener('click', function(e){
-    var el = e.target;
-    for(var i=0;i<3;i++){
-      if(!el || el===document.body) break;
-      var id = el.id || '';
-      if(id==='crm-send'||id==='crm-cancel'||id==='crm-fab'||id==='crm-ov'||id==='crm-box'||id==='crm-flag-btn'||id==='crm-num-inp'||id==='crm-country-search'||id==='crm-ok-close') return;
-      if(drop.contains(el)||document.getElementById('crm-phone-wrap').contains(el)) return;
-      if(el.tagName==='BUTTON'||el.tagName==='A'){
-        e.preventDefault();
-        openModal();
-        return;
-      }
-      el = el.parentElement;
-    }
-  });
+{$buttonHijackJs}
 
   // Enviar formulario
   document.getElementById('crm-send').addEventListener('click', async function(){
@@ -539,6 +617,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['landing_file'])) {
       }
     }catch(e){ alert('Error de red. Intenta de nuevo.'); this.textContent='Enviar mis datos →'; this.disabled=false; }
   });
+{$formBridgeJs}
 
   // Track visita única por sesión
   var k='crm_v_'+LID;

@@ -49,9 +49,12 @@ if ($action === 'view') {
 if ($action === 'lead') {
     $name     = trim($data['name']     ?? '');
     $email    = trim($data['email']    ?? '');
+    // Whatsapp es opcional: el modal propio del CRM siempre lo pide, pero
+    // cuando la landing usa su propio formulario (ver api/landings.php) ese
+    // formulario puede no tener un campo de teléfono reconocible.
     $whatsapp = trim($data['whatsapp'] ?? '');
 
-    if (!$name || !$email || !$whatsapp) {
+    if (!$name || !$email) {
         echo json_encode(['error' => 'Campos incompletos']); exit;
     }
 
