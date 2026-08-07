@@ -5,6 +5,12 @@ require_once 'config.php';
 
 if (!isset($_SESSION['user_id'])) { http_response_code(401); echo json_encode(['error' => 'No autorizado']); exit; }
 $user_id = (int)$_SESSION['user_id'];
+// El admin ve y administra TODAS las landings del sistema (ver listado GET
+// más abajo, que ya no filtra por user_id para admin) — editar/borrar/
+// recolorear deben respetar lo mismo, o un admin no puede tocar una
+// landing que subió otro admin (el UPDATE no afecta ninguna fila, pero
+// igual responde success porque PDO no valida rowCount).
+$is_admin = (($_SESSION['user_role'] ?? 'subscriber') === 'admin');
 
 // === RUTAS ABSOLUTAS CONFIRMADAS ===
 $UPLOAD_DIR = dirname(dirname(__FILE__)) . '/landings_gen/';
@@ -40,8 +46,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'update') {
     $color = trim($_GET['color'] ?? '');
     
     if ($id > 0 && $title) {
-        $pdo->prepare("UPDATE landings SET title = ?, description = ?, color = ? WHERE id = ? AND user_id = ?")
-            ->execute([$title, $desc, $color, $id, $user_id]);
+        if ($is_admin) {
+            $pdo->prepare("UPDATE landings SET title = ?, description = ?, color = ? WHERE id = ?")
+                ->execute([$title, $desc, $color, $id]);
+        } else {
+            $pdo->prepare("UPDATE landings SET title = ?, description = ?, color = ? WHERE id = ? AND user_id = ?")
+                ->execute([$title, $desc, $color, $id, $user_id]);
+        }
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['error' => 'Datos incompletos']);
@@ -56,7 +67,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'update_color') {
     $id = (int)($_GET['id'] ?? 0);
     $color = trim($_GET['color'] ?? '');
     if ($id > 0 && $color) {
-        $pdo->prepare("UPDATE landings SET color = ? WHERE id = ? AND user_id = ?")->execute([$color, $id, $user_id]);
+        if ($is_admin) {
+            $pdo->prepare("UPDATE landings SET color = ? WHERE id = ?")->execute([$color, $id]);
+        } else {
+            $pdo->prepare("UPDATE landings SET color = ? WHERE id = ? AND user_id = ?")->execute([$color, $id, $user_id]);
+        }
         echo json_encode(['success' => true]);
     }
     exit;
@@ -68,14 +83,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'update_color') {
 if (isset($_GET['action']) && $_GET['action'] === 'delete') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id > 0) {
-        $stmt = $pdo->prepare("SELECT filename FROM landings WHERE id = ? AND user_id = ?");
-        $stmt->execute([$id, $user_id]);
+        if ($is_admin) {
+            $stmt = $pdo->prepare("SELECT filename FROM landings WHERE id = ?");
+            $stmt->execute([$id]);
+        } else {
+            $stmt = $pdo->prepare("SELECT filename FROM landings WHERE id = ? AND user_id = ?");
+            $stmt->execute([$id, $user_id]);
+        }
         $fn = $stmt->fetchColumn();
         if ($fn) {
             $filepath = $UPLOAD_DIR . $fn;
             if (file_exists($filepath)) @unlink($filepath);
         }
-        $pdo->prepare("DELETE FROM landings WHERE id = ? AND user_id = ?")->execute([$id, $user_id]);
+        if ($is_admin) {
+            $pdo->prepare("DELETE FROM landings WHERE id = ?")->execute([$id]);
+        } else {
+            $pdo->prepare("DELETE FROM landings WHERE id = ? AND user_id = ?")->execute([$id, $user_id]);
+        }
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['error' => 'ID inválido']);
