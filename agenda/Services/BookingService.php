@@ -307,6 +307,27 @@ class BookingService {
         return $this->getById($bookingId);
     }
 
+    /**
+     * Resultado de asistencia de un turno ya pasado, cargado por el staff:
+     * 'completed' (vino) o 'no_show' (no vino). Solo aplica a reservas que
+     * todavía estaban abiertas (confirmed/rescheduled) — una vez cancelada
+     * o ya resuelta, no tiene sentido pisar el resultado.
+     */
+    public function markAttendanceOutcome(int $ownerUserId, int $bookingId, bool $attended): array {
+        $stmt = $this->pdo->prepare("SELECT * FROM agenda_bookings WHERE id = ? AND user_id = ?");
+        $stmt->execute([$bookingId, $ownerUserId]);
+        $booking = $stmt->fetch();
+        if (!$booking) throw new AgendaBookingException('not_found', 'Reserva no encontrada.');
+        if (!in_array($booking['status'], ['confirmed', 'rescheduled'], true)) {
+            throw new AgendaBookingException('invalid_state', 'Esta reserva no admite marcar asistencia.');
+        }
+
+        $newStatus = $attended ? 'completed' : 'no_show';
+        $this->pdo->prepare("UPDATE agenda_bookings SET status = ? WHERE id = ?")->execute([$newStatus, $bookingId]);
+        $this->logEvent($bookingId, $attended ? 'marked_completed' : 'marked_no_show', 'staff');
+        return $this->getById($bookingId);
+    }
+
     public function getById(int $id): array {
         $stmt = $this->pdo->prepare("SELECT * FROM agenda_bookings WHERE id = ?");
         $stmt->execute([$id]);

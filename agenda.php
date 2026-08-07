@@ -1282,21 +1282,45 @@ async function loadBookings() {
         </div>`;
 
     const STATUS_BADGE = { held: 'bg-amber-50 text-amber-600', confirmed: 'bg-emerald-50 text-emerald-600', rescheduled: 'bg-blue-50 text-blue-600', cancelled: 'bg-slate-100 text-slate-400', completed: 'bg-slate-100 text-slate-500', no_show: 'bg-red-50 text-red-500' };
-    document.getElementById('bookingsBody').innerHTML = bookings.map(b => `
+    const STATUS_LABELS = { held: 'Pendiente', confirmed: 'Confirmada', rescheduled: 'Reprogramada', cancelled: 'Cancelada', completed: 'Asistió', no_show: 'No asistió' };
+    const now = new Date();
+    document.getElementById('bookingsBody').innerHTML = bookings.map(b => {
+        const isPast = new Date(b.ends_at.replace(' ', 'T')) < now;
+        const isOpen = ['confirmed', 'rescheduled'].includes(b.status);
+        let actionsHtml = '';
+        if (isOpen && isPast) {
+            actionsHtml = `<div class="flex gap-1.5 justify-end">
+                <button class="btn-secondary" style="padding:.35rem .65rem;font-size:11px" onclick="markAttendance(${b.id}, 1)">Vino</button>
+                <button class="btn-danger" style="padding:.35rem .65rem;font-size:11px" onclick="markAttendance(${b.id}, 0)">No vino</button>
+            </div>`;
+        } else if (isOpen || b.status === 'held') {
+            actionsHtml = `<button class="btn-danger" onclick="cancelBooking(${b.id})">Cancelar</button>`;
+        }
+        return `
         <tr>
             <td class="font-bold">${b.starts_at.slice(0,16).replace('T',' ')}</td>
             <td>${escapeHtml(b.resource_name)}</td>
             <td>${escapeHtml(b.service_name)}</td>
             <td>${escapeHtml(b.contact_name || '—')}${b.contact_phone ? '<br><span class="text-slate-400 text-[11px]">' + escapeHtml(b.contact_phone) + '</span>' : ''}</td>
-            <td><span class="text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_BADGE[b.status] || ''}">${b.status}</span>
+            <td><span class="text-[10px] font-black uppercase px-2 py-1 rounded-full ${STATUS_BADGE[b.status] || ''}">${STATUS_LABELS[b.status] || b.status}</span>
                 ${b.zoom_join_url ? `<a href="${b.zoom_join_url}" target="_blank" title="Unirse por Zoom" class="text-blue-500 ml-1"><i data-lucide="video" class="w-3.5 h-3.5 inline"></i></a>` : ''}
                 ${b.google_event_id ? `<i data-lucide="calendar-check-2" class="w-3.5 h-3.5 inline text-emerald-500 ml-1" title="Sincronizado con Google Calendar"></i>` : ''}</td>
             <td>${parseInt(b.attendance_confirmed) ? '<i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>' : '—'}</td>
-            <td class="text-right">${['confirmed','rescheduled','held'].includes(b.status) ? `<button class="btn-danger" onclick="cancelBooking(${b.id})">Cancelar</button>` : ''}</td>
-        </tr>`).join('') || '<tr><td colspan="7" class="text-center py-10 text-slate-400">Sin reservas con estos filtros</td></tr>';
+            <td class="text-right">${actionsHtml}</td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="7" class="text-center py-10 text-slate-400">Sin reservas con estos filtros</td></tr>';
     icons();
 }
 async function cancelBooking(id) { if (!(await showConfirm('¿Cancelar esta reserva?'))) return; await apiPost('api/agenda-bookings.php', { action: 'cancel', id }); loadBookings(); }
+async function markAttendance(id, attended) {
+    const msg = attended ? '¿Confirmar que el cliente asistió a este turno?' : '¿Confirmar que el cliente NO asistió a este turno?';
+    if (!(await showConfirm(msg))) return;
+    try {
+        await apiPost('api/agenda-bookings.php', { action: 'mark_attendance', id, attended: attended ? 1 : 0 });
+        loadBookings();
+        showToast(attended ? 'Marcado como "Asistió"' : 'Marcado como "No asistió"', 'success');
+    } catch (err) { showToast(err.message); }
+}
 
 // ── MODAL: NUEVA RESERVA MANUAL ──
 function manualBookingSetupIssue() {

@@ -82,6 +82,16 @@ if ($method === 'POST') {
         }
     }
 
+    if ($action === 'mark_attendance' && !empty($data['id'])) {
+        try {
+            $attended = !empty($data['attended']);
+            $booking = $bookingService->markAttendanceOutcome($ownerUserId, (int)$data['id'], $attended);
+            respond(['success' => true, 'booking' => $booking]);
+        } catch (AgendaBookingException $e) {
+            respond(['error' => $e->getMessage()], $e->errorCode === 'not_found' ? 404 : 400);
+        }
+    }
+
     if ($action === 'create_manual') {
         $resourceId = (int)($data['resource_id'] ?? 0);
         $serviceId = (int)($data['service_id'] ?? 0);
