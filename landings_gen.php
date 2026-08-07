@@ -30,9 +30,29 @@ try {
     $sub = null;
 
     if ($isOwner) {
-        // El dueño ve la landing sin registrar vista ni tracking
         $filename = $landing['filename'];
-        $token    = 'owner-' . $landing['id'];
+        // El dueño no tiene fila propia en landing_subscriptions (esa tabla
+        // es para asignaciones a OTROS usuarios) — se la creamos on demand
+        // para que la acción post-registro que configuró (ver
+        // api/landing_config.php) funcione también en su propio enlace de
+        // vista previa/uso directo. Las vistas del dueño siguen sin sumar
+        // al contador (ver más abajo), solo cambia que ahora el token es
+        // real en vez de sintético, así landing_track.php puede resolver
+        // la suscripción al recibir un lead.
+        $ownStmt = $pdo->prepare("SELECT token FROM landing_subscriptions WHERE landing_id = ? AND user_id = ?");
+        $ownStmt->execute([$landing['id'], $user['id']]);
+        $token = $ownStmt->fetchColumn();
+        if (!$token) {
+            $token = bin2hex(random_bytes(12));
+            try {
+                $pdo->prepare("INSERT INTO landing_subscriptions (landing_id, user_id, token) VALUES (?, ?, ?)")
+                    ->execute([$landing['id'], $user['id'], $token]);
+            } catch (Exception $e) {
+                // Carrera con otra request creando la misma fila a la vez: releer.
+                $ownStmt->execute([$landing['id'], $user['id']]);
+                $token = $ownStmt->fetchColumn() ?: $token;
+            }
+        }
     } else {
         $stmtSub = $pdo->prepare("
             SELECT ls.token, ls.id AS sub_id
@@ -57,11 +77,21 @@ try {
 
     $html = file_get_contents($htmlPath);
 
-    // 4. Inyectar script de tracking (solo si no es el dueño)
+    // 4. Inyectar script de tracking. Antes esto se saltaba entero para el
+    // dueño ("vista previa, sin tracking"), lo que también dejaba sin
+    // efecto la acción post-registro que hubiera configurado — ahora la
+    // única diferencia real es que sus propias visitas no suman al
+    // contador de vistas; el token (real, ver arriba) y el manejo de la
+    // reserva/lead son los mismos para dueño y suscriptor.
     $crmUrl = CRM_URL;
-    if ($isOwner) {
-        $trackScript = '<!-- Vista previa del propietario, sin tracking -->';
-    } else {
+    $viewTrackingJs = $isOwner ? '' : <<<'JS'
+  var k = 'crm_sv_' + TOKEN;
+  if (!sessionStorage.getItem(k)) {
+    fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'view', token:TOKEN}) });
+    sessionStorage.setItem(k, '1');
+  }
+JS;
+
     $trackScript = <<<JS
 <style>
   #crm-fab { display: none !important; }
@@ -83,11 +113,7 @@ try {
     if(ov) { ov.classList.remove('crm-open'); ov.style.setProperty('display', 'none', 'important'); }
   };
 
-  var k = 'crm_sv_' + TOKEN;
-  if (!sessionStorage.getItem(k)) {
-    fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'view', token:TOKEN}) });
-    sessionStorage.setItem(k, '1');
-  }
+{$viewTrackingJs}
 
   document.addEventListener('DOMContentLoaded', function() {
     var btn = document.getElementById('crm-send');
@@ -128,7 +154,6 @@ try {
 })();
 </script>
 JS;
-    }
 
     $html = (stripos($html, '</body>') !== false)
         ? str_ireplace('</body>', $trackScript . "\n</body>", $html)

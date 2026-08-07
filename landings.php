@@ -655,6 +655,9 @@ function renderLandings(data) {
                 <a href="${l.url}" target="_blank" class="w-8 h-8 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center justify-center transition-all" title="Ver landing externa">
                     <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                 </a>
+                <button onclick="openConfigModal(${l.id})" class="w-8 h-8 bg-indigo-50 text-[#5c59f2] hover:bg-[#5c59f2] hover:text-white rounded-lg flex items-center justify-center transition-all" title="Configurar Acción Post-Registro">
+                    <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                </button>
                 ${l.can_delete ? `
                     <button onclick='editLanding(${JSON.stringify(l).replace(/'/g, "&#39;")})' class="w-8 h-8 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center justify-center transition-all" title="Editar">
                         <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
@@ -662,11 +665,7 @@ function renderLandings(data) {
                     <button onclick="deleteLanding(${l.id})" class="w-8 h-8 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg flex items-center justify-center transition-all" title="Eliminar">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     </button>
-                ` : `
-                    <button onclick="openConfigModal(${l.id})" class="w-8 h-8 bg-indigo-50 text-[#5c59f2] hover:bg-[#5c59f2] hover:text-white rounded-lg flex items-center justify-center transition-all" title="Configurar Acción Post-Registro">
-                        <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-                    </button>
-                `}
+                ` : ''}
             </div>
         </div>`;
     }).join('');
